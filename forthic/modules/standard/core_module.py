@@ -10,13 +10,13 @@ import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..interpreter import Interpreter
+    from ...interpreter import Interpreter
 
-from ..decorators import DecoratedModule, DirectWord, register_module_doc
-from ..decorators import Word as WordDecorator
-from ..errors import IntentionalStopError, InvalidVariableNameError
-from ..module import Variable
-from ..word_options import WordOptions
+from ...decorators import DecoratedModule, DirectWord, register_module_doc
+from ...decorators import Word as WordDecorator
+from ...errors import IntentionalStopError, InvalidVariableNameError
+from ...module import Variable
+from ...word_options import WordOptions
 
 
 class CoreModule(DecoratedModule):

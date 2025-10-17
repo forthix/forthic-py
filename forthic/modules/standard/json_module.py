@@ -9,10 +9,10 @@ import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..interpreter import Interpreter
+    from ...interpreter import Interpreter
 
-from ..decorators import DecoratedModule, DirectWord, register_module_doc
-from ..decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, DirectWord, register_module_doc
+from ...decorators import Word as WordDecorator
 
 
 class JSONModule(DecoratedModule):

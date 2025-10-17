@@ -2,6 +2,12 @@
 
 A modern Python runtime for Forthic - a stack-based, concatenative programming language.
 
+## Status
+
+- ✅ **Phase 1**: Core Infrastructure (COMPLETE)
+- ✅ **Phase 2**: Decorator System (COMPLETE)
+- ✅ **Phase 10.5**: Configuration-Based Module Loading (COMPLETE)
+
 ## Phase 1 Status: Core Infrastructure (COMPLETE)
 
 Phase 1 implementation includes:
@@ -96,15 +102,64 @@ forthic-py/
 └── README.md           # This file
 ```
 
-## What's Next: Phase 2
+## gRPC Server with Dynamic Module Loading
 
-Phase 2 will implement the decorator system:
-- `@Word` decorator for automatic stack marshalling
-- `@DirectWord` decorator for manual stack access
-- `DecoratedModule` base class
-- Module documentation system
+The Python runtime includes a production-ready gRPC server that supports configuration-based module loading:
 
-See `IMPLEMENTATION_PLAN.md` for details.
+```bash
+# Install with gRPC support
+pip install -e ".[grpc]"
+
+# Start server with default modules
+python -m forthic.grpc.server
+
+# Start with custom module configuration
+python -m forthic.grpc.server --modules-config modules.yaml
+
+# Or use the console script
+forthic-py-server --modules-config modules.yaml
+```
+
+### Creating Custom Modules
+
+```python
+# my_module.py
+from forthic.decorators import DecoratedModule, Word
+
+class MyModule(DecoratedModule):
+    def __init__(self):
+        super().__init__("mymodule")
+
+    @Word("( a b -- c )", "Add two numbers")
+    async def ADD(self, a, b):
+        return a + b
+```
+
+### Module Configuration
+
+```yaml
+# modules.yaml
+modules:
+  - name: mymodule
+    import_path: my_module:MyModule
+    optional: false
+    description: "My custom module"
+```
+
+### Using from TypeScript
+
+```typescript
+import { GrpcClient } from '@forthix/forthic-ts/grpc';
+
+const client = new GrpcClient('localhost:50051');
+const result = await client.executeWord('ADD', [5, 3]); // [8]
+```
+
+See [Module Loading Documentation](docs/module-loading.md) for complete details.
+
+## What's Next
+
+See `IMPLEMENTATION_PLAN.md` for the full development roadmap.
 
 ## Features Implemented (Phase 1)
 

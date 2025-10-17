@@ -1,15 +1,18 @@
-"""Standard library modules for Forthic."""
+"""Forthic modules package."""
 
-from .array_module import ArrayModule
-from .boolean_module import BooleanModule
-from .core_module import CoreModule
-from .datetime_module import DateTimeModule
-from .json_module import JSONModule
-from .math_module import MathModule
-from .record_module import RecordModule
-from .string_module import StringModule
+from .standard import (
+    ArrayModule,
+    BooleanModule,
+    CoreModule,
+    DateTimeModule,
+    JSONModule,
+    MathModule,
+    RecordModule,
+    StringModule,
+)
 
 __all__ = [
+    # Standard library modules
     "CoreModule",
     "MathModule",
     "BooleanModule",
@@ -19,3 +22,11 @@ __all__ = [
     "JSONModule",
     "DateTimeModule",
 ]
+
+# Optional: PandasModule (requires pandas to be installed)
+try:
+    from .pandas_module import PandasModule
+
+    __all__.append("PandasModule")
+except ImportError:
+    pass

@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     pass
 
-from ..decorators import DecoratedModule, register_module_doc
-from ..decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, register_module_doc
+from ...decorators import Word as WordDecorator
 
 
 class RecordModule(DecoratedModule):

@@ -1,0 +1,19 @@
+# Example Module Configuration for Forthic gRPC Server
+#
+# This demonstrates how to load custom modules into the server.
+#
+# Usage:
+#   python -m forthic.grpc.server --modules-config examples/example_modules_config.yaml
+
+modules:
+  # Load the example module
+  - name: example
+    import_path: examples.dynamic_module_example:ExampleModule
+    optional: false
+    description: "Example module with math, string, and list operations"
+
+  # Load pandas (optional - won't fail if not installed)
+  - name: pandas
+    import_path: forthic.modules.pandas_module:PandasModule
+    optional: true
+    description: "Pandas DataFrame operations"

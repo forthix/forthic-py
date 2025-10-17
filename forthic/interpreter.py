@@ -282,8 +282,17 @@ class Interpreter:
             module = self.find_module(module_name)
             self.get_app_module().import_module(prefix, module, self)
 
-    def import_module(self, module: Module, prefix: str = "") -> None:
-        """Convenience method to register and use a module."""
+    def import_module(self, module: Module | Any, prefix: str = "") -> None:
+        """Convenience method to register and use a module.
+
+        Args:
+            module: Module or DecoratedModule to import
+            prefix: Optional prefix for word names (empty string = no prefix)
+        """
+        # Handle DecoratedModule by extracting the wrapped Module
+        if hasattr(module, "_module") and isinstance(module._module, Module):
+            module = module._module
+
         self.register_module(module)
         self.use_modules([[module.name, prefix]])
 
@@ -599,7 +608,7 @@ class StandardInterpreter(Interpreter):
 
     def _import_standard_library(self) -> None:
         """Import all standard library modules without prefixes."""
-        from .modules import (
+        from .modules.standard import (
             ArrayModule,
             BooleanModule,
             CoreModule,
@@ -625,3 +634,14 @@ class StandardInterpreter(Interpreter):
         # This ensures they're checked LAST during find_word()
         for module in stdlib:
             self.import_module(module._module, "")
+
+        # Phase 11: Auto-register RemoteRuntimeModule for gRPC multi-runtime support
+        # This is optional - only loaded if grpc dependencies are available
+        try:
+            from .grpc.remote_runtime_module import RemoteRuntimeModule
+
+            remote_runtime_module = RemoteRuntimeModule()
+            self.import_module(remote_runtime_module, "")
+        except ImportError:
+            # grpc dependencies not available - skip remote runtime support
+            pass

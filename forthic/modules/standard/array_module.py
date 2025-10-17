@@ -9,10 +9,10 @@ import random
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..interpreter import Interpreter
+    from ...interpreter import Interpreter
 
-from ..decorators import DecoratedModule, DirectWord, register_module_doc
-from ..decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, DirectWord, register_module_doc
+from ...decorators import Word as WordDecorator
 
 
 class ArrayModule(DecoratedModule):
@@ -229,7 +229,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     )
     async def MAP(self, interp: Interpreter) -> None:
         options_dict = {}
-        from ..word_options import WordOptions
+        from ...word_options import WordOptions
 
         if len(interp.get_stack()) > 0:
             top = interp.stack_peek()
@@ -439,7 +439,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     )
     async def SELECT(self, interp: Interpreter) -> None:
         options_dict = {}
-        from ..word_options import WordOptions
+        from ...word_options import WordOptions
 
         if len(interp.get_stack()) > 0:
             top = interp.stack_peek()
@@ -743,7 +743,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     )
     async def GROUP_BY(self, interp: Interpreter) -> None:
         options_dict = {}
-        from ..word_options import WordOptions
+        from ...word_options import WordOptions
 
         if len(interp.get_stack()) > 0:
             top = interp.stack_peek()
@@ -826,7 +826,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     )
     async def FOREACH(self, interp: Interpreter) -> None:
         options_dict = {}
-        from ..word_options import WordOptions
+        from ...word_options import WordOptions
 
         if len(interp.get_stack()) > 0:
             top = interp.stack_peek()

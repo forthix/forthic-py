@@ -26,10 +26,10 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
-from ..decorators import DirectWord, Word, DecoratedModule, register_module_doc
+from ...decorators import DirectWord, Word, DecoratedModule, register_module_doc
 
 if TYPE_CHECKING:
-    from ..interpreter import Interpreter
+    from ...interpreter import Interpreter
 
 
 class DateTimeModule(DecoratedModule):
