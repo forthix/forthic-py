@@ -12,8 +12,8 @@ from urllib.parse import quote, unquote
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
 
-from ...decorators import DecoratedModule, DirectWord, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import ForthicWord as WordDecorator
 
 
 class StringModule(DecoratedModule):
@@ -47,7 +47,7 @@ String manipulation and processing operations with regex and URL encoding suppor
     # Concatenation
     # ==================
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( str1:string str2:string -- result:string ) OR ( strings:string[] -- result:string )",
         "Concatenate two strings or array of strings",
         "CONCAT",

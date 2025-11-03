@@ -10,7 +10,7 @@ Usage:
     3. Use the module from TypeScript via USE-PY-MODULES
 """
 
-from forthic.decorators import DecoratedModule, Word, DirectWord
+from forthic.decorators import DecoratedModule, ForthicWord, ForthicDirectWord
 
 
 class ExampleModule(DecoratedModule):
@@ -23,17 +23,17 @@ class ExampleModule(DecoratedModule):
     # Math Operations
     # ==================
 
-    @Word("( a:int b:int -- c:int )", "Multiply two numbers")
+    @ForthicWord("( a:int b:int -- c:int )", "Multiply two numbers")
     async def MULTIPLY(self, a: int, b: int) -> int:
         """Multiply two numbers."""
         return a * b
 
-    @Word("( n:int -- n:int )", "Square a number")
+    @ForthicWord("( n:int -- n:int )", "Square a number")
     async def SQUARE(self, n: int) -> int:
         """Square a number (n * n)."""
         return n * n
 
-    @Word("( a:int b:int -- c:int )", "Calculate power (a^b)")
+    @ForthicWord("( a:int b:int -- c:int )", "Calculate power (a^b)")
     async def POWER(self, a: int, b: int) -> int:
         """Calculate a raised to the power of b."""
         return a ** b
@@ -42,17 +42,17 @@ class ExampleModule(DecoratedModule):
     # String Operations
     # ==================
 
-    @Word("( text:str -- text:str )", "Reverse a string")
+    @ForthicWord("( text:str -- text:str )", "Reverse a string")
     async def REVERSE_TEXT(self, text: str) -> str:
         """Reverse a string."""
         return text[::-1]
 
-    @Word("( text:str char:str -- count:int )", "Count character occurrences")
+    @ForthicWord("( text:str char:str -- count:int )", "Count character occurrences")
     async def COUNT_CHAR(self, text: str, char: str) -> int:
         """Count occurrences of a character in text."""
         return text.count(char)
 
-    @Word("( words:list -- sentence:str )", "Join words into sentence")
+    @ForthicWord("( words:list -- sentence:str )", "Join words into sentence")
     async def MAKE_SENTENCE(self, words: list) -> str:
         """Join list of words into a sentence."""
         return " ".join(str(w) for w in words)
@@ -61,19 +61,19 @@ class ExampleModule(DecoratedModule):
     # List Operations
     # ==================
 
-    @Word("( items:list -- sum:int )", "Sum all numbers in list")
+    @ForthicWord("( items:list -- sum:int )", "Sum all numbers in list")
     async def SUM_LIST(self, items: list) -> int:
         """Sum all numbers in a list."""
         return sum(items)
 
-    @Word("( items:list -- avg:float )", "Average of numbers in list")
+    @ForthicWord("( items:list -- avg:float )", "Average of numbers in list")
     async def AVG_LIST(self, items: list) -> float:
         """Calculate average of numbers in list."""
         if not items:
             return 0.0
         return sum(items) / len(items)
 
-    @Word("( items:list n:int -- chunks:list )", "Chunk list into groups of n")
+    @ForthicWord("( items:list n:int -- chunks:list )", "Chunk list into groups of n")
     async def CHUNK_LIST(self, items: list, n: int) -> list:
         """Split list into chunks of size n."""
         return [items[i:i + n] for i in range(0, len(items), n)]
@@ -82,7 +82,7 @@ class ExampleModule(DecoratedModule):
     # Utility Operations
     # ==================
 
-    @Word("( n:int -- fibonacci:int )", "Calculate nth Fibonacci number")
+    @ForthicWord("( n:int -- fibonacci:int )", "Calculate nth Fibonacci number")
     async def FIBONACCI(self, n: int) -> int:
         """Calculate nth Fibonacci number (0-indexed)."""
         if n <= 0:
@@ -95,7 +95,7 @@ class ExampleModule(DecoratedModule):
             a, b = b, a + b
         return b
 
-    @Word("( n:int -- is_prime:bool )", "Check if number is prime")
+    @ForthicWord("( n:int -- is_prime:bool )", "Check if number is prime")
     async def IS_PRIME(self, n: int) -> bool:
         """Check if a number is prime."""
         if n < 2:
@@ -110,7 +110,7 @@ class ExampleModule(DecoratedModule):
                 return False
         return True
 
-    @DirectWord("( n:int forthic:str -- results:list )", "Map Forthic over range")
+    @ForthicDirectWord("( n:int forthic:str -- results:list )", "Map Forthic over range")
     async def MAP_RANGE(self, interp) -> None:
         """
         Map Forthic code over range(n).

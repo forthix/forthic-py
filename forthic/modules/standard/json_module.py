@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
 
-from ...decorators import DecoratedModule, DirectWord, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import ForthicWord as WordDecorator
 
 
 class JSONModule(DecoratedModule):
@@ -42,7 +42,7 @@ JSON serialization, parsing, and formatting operations.
             return "null"
         return json.dumps(obj)
 
-    @DirectWord("( json:string -- object:any )", "Parse JSON string to object", "JSON>")
+    @ForthicDirectWord("( json:string -- object:any )", "Parse JSON string to object", "JSON>")
     async def from_JSON(self, interp: Interpreter) -> None:
         json_str = interp.stack_pop()
         if not json_str or json_str.strip() == "":

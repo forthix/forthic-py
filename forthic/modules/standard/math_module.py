@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
 
-from ...decorators import DecoratedModule, DirectWord, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import ForthicWord as WordDecorator
 
 
 class MathModule(DecoratedModule):
@@ -45,7 +45,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
     # Arithmetic Operations
     # ==================
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:number b:number -- sum:number ) OR ( numbers:number[] -- sum:number )",
         "Add two numbers or sum array",
         "+",
@@ -68,7 +68,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         num_b = 0 if b is None else b
         interp.stack_push(num_a + num_b)
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:number b:number -- sum:number ) OR ( numbers:number[] -- sum:number )", "Add two numbers or sum array", "ADD"
     )
     async def plus_ADD(self, interp: Interpreter) -> None:
@@ -86,7 +86,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             return None
         return a - b
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:number b:number -- product:number ) OR ( numbers:number[] -- product:number )",
         "Multiply two numbers or product of array",
         "*",
@@ -112,7 +112,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             return
         interp.stack_push(a * b)
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:number b:number -- product:number ) OR ( numbers:number[] -- product:number )",
         "Multiply two numbers or product of array",
         "MULTIPLY",
@@ -216,7 +216,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
 
         return 0
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:number b:number -- max:number ) OR ( items:number[] -- max:number )", "Maximum of two numbers or array", "MAX"
     )
     async def MAX(self, interp: Interpreter) -> None:
@@ -234,7 +234,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         a = interp.stack_pop()
         interp.stack_push(max(a, b))
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:number b:number -- min:number ) OR ( items:number[] -- min:number )", "Minimum of two numbers or array", "MIN"
     )
     async def MIN(self, interp: Interpreter) -> None:
@@ -350,7 +350,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             return None
         return math.ceil(n)
 
-    @DirectWord("( value:number min:number max:number -- clamped:number )", "Constrain value to range [min, max]", "CLAMP")
+    @ForthicDirectWord("( value:number min:number max:number -- clamped:number )", "Constrain value to range [min, max]", "CLAMP")
     async def CLAMP(
             self, interp: Interpreter
     ) -> None:

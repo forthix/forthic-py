@@ -1,6 +1,6 @@
 """Word decorators for Forthic modules.
 
-Provides @Word and @DirectWord decorators for creating module words with automatic
+Provides @ForthicWord and @ForthicDirectWord decorators for creating module words with automatic
 stack marshalling and documentation support.
 """
 
@@ -30,7 +30,7 @@ _module_metadata: weakref.WeakKeyDictionary[type, ModuleMetadata] = (
 
 @dataclass
 class WordMetadata:
-    """Metadata for a @Word decorated method."""
+    """Metadata for a @ForthicWord decorated method."""
 
     stack_effect: str
     description: str
@@ -42,7 +42,7 @@ class WordMetadata:
 
 @dataclass
 class DirectWordMetadata:
-    """Metadata for a @DirectWord decorated method."""
+    """Metadata for a @ForthicDirectWord decorated method."""
 
     stack_effect: str
     description: str
@@ -158,7 +158,7 @@ def parse_module_doc_string(doc_string: str) -> ModuleMetadata:
     return result
 
 
-def Word(
+def ForthicWord(
     stack_effect: str, description: str = "", custom_word_name: str | None = None
 ) -> Callable:
     """Decorator that auto-registers word and handles stack marshalling.
@@ -169,11 +169,11 @@ def Word(
         custom_word_name: Optional custom word name (defaults to method name)
 
     Example:
-        @Word("( a:number b:number -- sum:number )", "Adds two numbers")
+        @ForthicWord("( a:number b:number -- sum:number )", "Adds two numbers")
         async def ADD(self, a: int, b: int) -> int:
             return a + b
 
-        @Word("( rec:any field:any -- value:any )", "Get value from record", "REC@")
+        @ForthicWord("( rec:any field:any -- value:any )", "Get value from record", "REC@")
         async def REC_at(self, rec: Any, field: Any) -> Any:
             # Word name will be "REC@" instead of "REC_at"
             return rec.get(field)
@@ -231,7 +231,7 @@ def Word(
     return decorator
 
 
-def DirectWord(
+def ForthicDirectWord(
     stack_effect: str, description: str = "", custom_word_name: str | None = None
 ) -> Callable:
     """Decorator that auto-registers word but does NOT handle stack marshalling.
@@ -245,7 +245,7 @@ def DirectWord(
         custom_word_name: Optional custom word name (defaults to method name)
 
     Example:
-        @DirectWord("( item:any forthic:str num:int -- )", "Repeat execution num_times", "<REPEAT")
+        @ForthicDirectWord("( item:any forthic:str num:int -- )", "Repeat execution num_times", "<REPEAT")
         async def l_REPEAT(self, interp: Interpreter) -> None:
             num = interp.stack_pop()
             forthic = interp.stack_pop()
@@ -294,9 +294,9 @@ def register_module_doc(constructor: type, doc_string: str) -> None:
 
 
 class DecoratedModule:
-    """Base class for modules using @Word decorator.
+    """Base class for modules using @ForthicWord decorator.
 
-    Automatically registers all @Word decorated methods when interpreter is set.
+    Automatically registers all @ForthicWord decorated methods when interpreter is set.
     """
 
     def __init__(self, name: str):
@@ -342,19 +342,19 @@ class DecoratedModule:
                 continue
             attr = getattr(self, attr_name)
 
-            # Check if this is a @Word decorated method
+            # Check if this is a @ForthicWord decorated method
             if callable(attr) and hasattr(attr, "_forthic_word_metadata"):
                 metadata = attr._forthic_word_metadata
                 _word_metadata[cls][metadata.method_name] = metadata
 
-            # Check if this is a @DirectWord decorated method
+            # Check if this is a @ForthicDirectWord decorated method
             elif callable(attr) and hasattr(attr, "_forthic_direct_word_metadata"):
                 metadata = attr._forthic_direct_word_metadata
                 _direct_word_metadata[cls][metadata.method_name] = metadata
 
     def _register_decorated_words(self) -> None:
         """Register all decorated words with the module."""
-        # Register @Word decorated methods
+        # Register @ForthicWord decorated methods
         cls = type(self)
         if cls in _word_metadata:
             for method_name, metadata in _word_metadata[cls].items():
@@ -363,7 +363,7 @@ class DecoratedModule:
                 # Register as exportable word
                 self._module.add_module_word(metadata.word_name, method)
 
-        # Register @DirectWord decorated methods
+        # Register @ForthicDirectWord decorated methods
         if cls in _direct_word_metadata:
             for method_name, metadata in _direct_word_metadata[cls].items():
                 # Get the method
@@ -381,7 +381,7 @@ class DecoratedModule:
 
         cls = type(self)
 
-        # Get @Word decorated methods
+        # Get @ForthicWord decorated methods
         if cls in _word_metadata:
             for metadata in _word_metadata[cls].values():
                 docs.append(
@@ -392,7 +392,7 @@ class DecoratedModule:
                     }
                 )
 
-        # Get @DirectWord decorated methods
+        # Get @ForthicDirectWord decorated methods
         if cls in _direct_word_metadata:
             for metadata in _direct_word_metadata[cls].values():
                 docs.append(

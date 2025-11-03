@@ -7,7 +7,7 @@ import tempfile
 import yaml
 
 from forthic.grpc.module_loader import load_modules_from_config, ModuleLoadError
-from forthic.decorators import DecoratedModule, Word
+from forthic.decorators import DecoratedModule, ForthicWord
 
 
 # Test modules for loading
@@ -17,7 +17,7 @@ class TestModuleA(DecoratedModule):
     def __init__(self):
         super().__init__("test_a")
 
-    @Word("( a b -- c )", "Add two numbers")
+    @ForthicWord("( a b -- c )", "Add two numbers")
     async def ADD(self, a: int, b: int) -> int:
         return a + b
 
@@ -28,7 +28,7 @@ class TestModuleB(DecoratedModule):
     def __init__(self):
         super().__init__("test_b")
 
-    @Word("( a b -- c )", "Multiply two numbers")
+    @ForthicWord("( a b -- c )", "Multiply two numbers")
     async def MULTIPLY(self, a: int, b: int) -> int:
         return a * b
 

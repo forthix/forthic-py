@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     pass
 
 from ...decorators import DecoratedModule, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import ForthicWord as WordDecorator
 
 
 class RecordModule(DecoratedModule):

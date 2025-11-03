@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
 
-from ...decorators import DecoratedModule, DirectWord, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import ForthicWord as WordDecorator
 from ...errors import IntentionalStopError, InvalidVariableNameError
 from ...module import Variable
 from ...word_options import WordOptions
@@ -87,13 +87,13 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
         # No return = push nothing
         pass
 
-    @DirectWord("( a:any -- a:any a:any )", "Duplicates top stack item")
+    @ForthicDirectWord("( a:any -- a:any a:any )", "Duplicates top stack item")
     async def DUP(self, interp: Interpreter) -> None:
         a = interp.stack_pop()
         interp.stack_push(a)
         interp.stack_push(a)
 
-    @DirectWord("( a:any b:any -- b:any a:any )", "Swaps top two stack items")
+    @ForthicDirectWord("( a:any b:any -- b:any a:any )", "Swaps top two stack items")
     async def SWAP(self, interp: Interpreter) -> None:
         b = interp.stack_pop()
         a = interp.stack_pop()
@@ -104,7 +104,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # Debug Operations
     # ==================
 
-    @DirectWord("( -- )", "Prints top of stack and stops execution", "PEEK!")
+    @ForthicDirectWord("( -- )", "Prints top of stack and stops execution", "PEEK!")
     async def PEEK_bang(self, interp: Interpreter) -> None:
         stack = interp.get_stack().get_items()
         if len(stack) > 0:
@@ -113,7 +113,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
             print("<STACK EMPTY>")
         raise IntentionalStopError("PEEK!")
 
-    @DirectWord("( -- )", "Prints entire stack (reversed) and stops execution", "STACK!")
+    @ForthicDirectWord("( -- )", "Prints entire stack (reversed) and stops execution", "STACK!")
     async def STACK_bang(self, interp: Interpreter) -> None:
         stack = list(reversed(interp.get_stack().get_items()))
         print(json.dumps(stack, indent=2, default=str))
@@ -143,7 +143,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
             var_obj = variable
         var_obj.set_value(value)
 
-    @DirectWord("( variable:any -- value:any )", "Gets variable value (auto-creates if string name)", "@")
+    @ForthicDirectWord("( variable:any -- value:any )", "Gets variable value (auto-creates if string name)", "@")
     async def at(self, interp: Interpreter) -> None:
         variable = interp.stack_pop()
         if isinstance(variable, str):
@@ -152,7 +152,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
             var_obj = variable
         interp.stack_push(var_obj.get_value())
 
-    @DirectWord("( value:any variable:any -- value:any )", "Sets variable and returns value", "!@")
+    @ForthicDirectWord("( value:any variable:any -- value:any )", "Sets variable and returns value", "!@")
     async def bang_at(self, interp: Interpreter) -> None:
         variable = interp.stack_pop()
         value = interp.stack_pop()
@@ -167,7 +167,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # Execution
     # ==================
 
-    @DirectWord("( string:str -- )", "Interprets Forthic string in current context")
+    @ForthicDirectWord("( string:str -- )", "Interprets Forthic string in current context")
     async def INTERPRET(self, interp: Interpreter) -> None:
         string = interp.stack_pop()
         string_location = interp.get_string_location()
@@ -178,12 +178,12 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # Module Operations
     # ==================
 
-    @DirectWord("( names:list -- )", "Exports words from current module")
+    @ForthicDirectWord("( names:list -- )", "Exports words from current module")
     async def EXPORT(self, interp: Interpreter) -> None:
         names = interp.stack_pop()
         interp.cur_module().add_exportable(names)
 
-    @DirectWord("( names:list -- )", "Imports modules by name")
+    @ForthicDirectWord("( names:list -- )", "Imports modules by name")
     async def USE_MODULES(self, interp: Interpreter) -> None:
         names = interp.stack_pop()
         if names:
@@ -201,7 +201,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     async def NOP(self) -> None:
         pass
 
-    @DirectWord("( -- null:None )", "Pushes None onto stack")
+    @ForthicDirectWord("( -- null:None )", "Pushes None onto stack")
     async def NULL(self, interp: Interpreter) -> None:
         interp.stack_push(None)
 
@@ -218,7 +218,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
             return default_value
         return value
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( value:any default_forthic:str -- result:any )",
         "Returns value or executes Forthic if value is None/empty string",
         "*DEFAULT",
@@ -250,20 +250,20 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # Profiling
     # ==================
 
-    @DirectWord("( -- )", "Starts profiling word execution", "PROFILE-START")
+    @ForthicDirectWord("( -- )", "Starts profiling word execution", "PROFILE-START")
     async def PROFILE_START(self, interp: Interpreter) -> None:
         interp.start_profiling()
 
-    @DirectWord("( -- )", "Stops profiling word execution", "PROFILE-END")
+    @ForthicDirectWord("( -- )", "Stops profiling word execution", "PROFILE-END")
     async def PROFILE_END(self, interp: Interpreter) -> None:
         interp.stop_profiling()
 
-    @DirectWord("( label:str -- )", "Records profiling timestamp with label", "PROFILE-TIMESTAMP")
+    @ForthicDirectWord("( label:str -- )", "Records profiling timestamp with label", "PROFILE-TIMESTAMP")
     async def PROFILE_TIMESTAMP(self, interp: Interpreter) -> None:
         label = interp.stack_pop()
         interp.add_timestamp(label)
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( -- profile_data:dict )", "Returns profiling data (word counts and timestamps)", "PROFILE-DATA"
     )
     async def PROFILE_DATA(self, interp: Interpreter) -> None:

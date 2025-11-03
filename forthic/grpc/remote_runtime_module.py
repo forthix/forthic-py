@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from forthic.decorators import DecoratedModule, DirectWord, register_module_doc
-from forthic.decorators import Word as WordDecorator
+from forthic.decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from forthic.decorators import ForthicWord as WordDecorator
 from forthic.grpc.runtime_manager import RuntimeManager
 from forthic.grpc.remote_module import RemoteModule
 
@@ -68,7 +68,7 @@ they were local.
             """,
         )
 
-    @DirectWord("( name:str address:str -- )", "Connect to a remote runtime", "CONNECT-RUNTIME")
+    @ForthicDirectWord("( name:str address:str -- )", "Connect to a remote runtime", "CONNECT-RUNTIME")
     async def CONNECT_RUNTIME(self, interp: Interpreter) -> None:
         """Connect to a remote Forthic runtime (e.g., TypeScript, Ruby)
 
@@ -86,7 +86,7 @@ they were local.
         name = interp.stack_pop()
         self.runtime_manager.connect_runtime(name, address)
 
-    @DirectWord("( name:str -- )", "Disconnect from a remote runtime", "DISCONNECT-RUNTIME")
+    @ForthicDirectWord("( name:str -- )", "Disconnect from a remote runtime", "DISCONNECT-RUNTIME")
     async def DISCONNECT_RUNTIME(self, interp: Interpreter) -> None:
         """Disconnect from a remote runtime
 
@@ -113,7 +113,7 @@ they were local.
         """
         return self.runtime_manager.list_connections()
 
-    @DirectWord("( modules:list -- )", "Import TypeScript modules", "USE-TS-MODULES")
+    @ForthicDirectWord("( modules:list -- )", "Import TypeScript modules", "USE-TS-MODULES")
     async def USE_TS_MODULES(self, interp: Interpreter) -> None:
         """Load TypeScript modules from connected TypeScript runtime
 
@@ -133,7 +133,7 @@ they were local.
         module_names = interp.stack_pop()
         await self._load_modules("typescript", module_names, prefix=None, interp=interp)
 
-    @DirectWord("( modules:list prefix:str -- )", "Import TypeScript modules with prefix", "USE-TS-MODULES-AS")
+    @ForthicDirectWord("( modules:list prefix:str -- )", "Import TypeScript modules with prefix", "USE-TS-MODULES-AS")
     async def USE_TS_MODULES_AS(self, interp: Interpreter) -> None:
         """Load TypeScript modules with a prefix (e.g., 'ts.WORD')
 

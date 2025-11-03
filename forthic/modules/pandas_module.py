@@ -20,8 +20,8 @@ except ImportError:
         "Install with: pip install 'forthic[pandas]' or pip install pandas"
     )
 
-from ..decorators import DecoratedModule, DirectWord, register_module_doc
-from ..decorators import Word as WordDecorator
+from ..decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ..decorators import ForthicWord as WordDecorator
 
 
 class PandasModule(DecoratedModule):
@@ -271,7 +271,7 @@ DF>
 
         return df.select_dtypes(include=dtypes)
 
-    @DirectWord("( df:DataFrame column:str forthic:str -- series:Series )", "Apply Forthic to column", "DF.APPLY-COL")
+    @ForthicDirectWord("( df:DataFrame column:str forthic:str -- series:Series )", "Apply Forthic to column", "DF.APPLY-COL")
     async def DF_APPLY_COL(self, interp) -> None:
         """Apply Forthic code to each value in a column.
 
@@ -341,7 +341,7 @@ DF>
             raise KeyError(f"Label '{label}' not found in DataFrame index")
         return df.loc[label].to_dict()
 
-    @DirectWord("( df:DataFrame forthic:str -- df:DataFrame )", "Filter rows with Forthic predicate", "DF.FILTER")
+    @ForthicDirectWord("( df:DataFrame forthic:str -- df:DataFrame )", "Filter rows with Forthic predicate", "DF.FILTER")
     async def DF_FILTER(self, interp) -> None:
         """Filter DataFrame rows using Forthic predicate.
 
@@ -984,7 +984,7 @@ DF>
     # Transformation Operations
     # ==================
 
-    @DirectWord("( df:DataFrame forthic:str -- df:DataFrame )", "Map Forthic over DataFrame elements", "DF.MAP")
+    @ForthicDirectWord("( df:DataFrame forthic:str -- df:DataFrame )", "Map Forthic over DataFrame elements", "DF.MAP")
     async def DF_MAP(self, interp) -> None:
         """Map Forthic code over all elements in DataFrame.
 
@@ -1011,7 +1011,7 @@ DF>
 
         interp.stack_push(result)
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( df:DataFrame forthic:str [options:WordOptions] -- df:DataFrame )",
         "Apply Forthic to rows or columns",
         "DF.APPLY",

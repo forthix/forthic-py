@@ -26,7 +26,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
-from ...decorators import DirectWord, Word, DecoratedModule, register_module_doc
+from ...decorators import ForthicDirectWord, ForthicWord, DecoratedModule, register_module_doc
 
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
@@ -60,21 +60,21 @@ TODAY 7 ADD-DAYS
 """,
         )
 
-    @DirectWord("( -- date )", "Get current date", "TODAY")
+    @ForthicDirectWord("( -- date )", "Get current date", "TODAY")
     async def TODAY(self, interp: Interpreter) -> None:
         """Get current date in interpreter's timezone."""
         tz = interp.get_timezone()
         today = datetime.now(tz).date()
         interp.stack_push(today)
 
-    @DirectWord("( -- datetime )", "Get current datetime", "NOW")
+    @ForthicDirectWord("( -- datetime )", "Get current datetime", "NOW")
     async def NOW(self, interp: Interpreter) -> None:
         """Get current datetime in interpreter's timezone."""
         tz = interp.get_timezone()
         now = datetime.now(tz)
         interp.stack_push(now)
 
-    @DirectWord("( time -- time )", "Convert time to AM (subtract 12 from hour if >= 12)")
+    @ForthicDirectWord("( time -- time )", "Convert time to AM (subtract 12 from hour if >= 12)")
     async def AM(self, interp: Interpreter) -> None:
         """Convert time to AM."""
         t = interp.stack_pop()
@@ -90,7 +90,7 @@ TODAY 7 ADD-DAYS
         else:
             interp.stack_push(t)
 
-    @DirectWord("( time -- time )", "Convert time to PM (add 12 to hour if < 12)")
+    @ForthicDirectWord("( time -- time )", "Convert time to PM (add 12 to hour if < 12)")
     async def PM(self, interp: Interpreter) -> None:
         """Convert time to PM."""
         t = interp.stack_pop()
@@ -106,7 +106,7 @@ TODAY 7 ADD-DAYS
         else:
             interp.stack_push(t)
 
-    @DirectWord("( item -- time )", "Convert string or datetime to time", ">TIME")
+    @ForthicDirectWord("( item -- time )", "Convert string or datetime to time", ">TIME")
     async def to_TIME(self, interp: Interpreter) -> None:
         """Convert item to time object."""
         item = interp.stack_pop()
@@ -159,7 +159,7 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(None)
 
-    @DirectWord("( item -- date )", "Convert string or datetime to date", ">DATE")
+    @ForthicDirectWord("( item -- date )", "Convert string or datetime to date", ">DATE")
     async def to_DATE(self, interp: Interpreter) -> None:
         """Convert item to date object."""
         item = interp.stack_pop()
@@ -199,7 +199,7 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(None)
 
-    @DirectWord("( str_or_timestamp -- datetime )", "Convert string or timestamp to datetime", ">DATETIME")
+    @ForthicDirectWord("( str_or_timestamp -- datetime )", "Convert string or timestamp to datetime", ">DATETIME")
     async def to_DATETIME(self, interp: Interpreter) -> None:
         """Convert item to datetime object."""
         item = interp.stack_pop()
@@ -237,7 +237,7 @@ TODAY 7 ADD-DAYS
         except (ValueError, TypeError):
             interp.stack_push(None)
 
-    @DirectWord("( date time -- datetime )", "Combine date and time into datetime", "AT")
+    @ForthicDirectWord("( date time -- datetime )", "Combine date and time into datetime", "AT")
     async def AT(self, interp: Interpreter) -> None:
         """Combine date and time into datetime."""
         t = interp.stack_pop()
@@ -262,7 +262,7 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(dt)
 
-    @Word("( time -- str )", "Convert time to HH:MM string", "TIME>STR")
+    @ForthicWord("( time -- str )", "Convert time to HH:MM string", "TIME>STR")
     async def TIME_to_STR(self, t: Any) -> str:
         """Convert time to string."""
         if t is None or not isinstance(t, time):
@@ -270,7 +270,7 @@ TODAY 7 ADD-DAYS
 
         return f"{t.hour:02d}:{t.minute:02d}"
 
-    @Word("( date -- str )", "Convert date to YYYY-MM-DD string", "DATE>STR")
+    @ForthicWord("( date -- str )", "Convert date to YYYY-MM-DD string", "DATE>STR")
     async def DATE_to_STR(self, d: Any) -> str:
         """Convert date to string."""
         if d is None:
@@ -285,7 +285,7 @@ TODAY 7 ADD-DAYS
 
         return d.isoformat()
 
-    @Word("( date -- int )", "Convert date to integer (YYYYMMDD)", "DATE>INT")
+    @ForthicWord("( date -- int )", "Convert date to integer (YYYYMMDD)", "DATE>INT")
     async def DATE_to_INT(self, d: Any) -> Any:
         """Convert date to integer."""
         if d is None:
@@ -300,7 +300,7 @@ TODAY 7 ADD-DAYS
 
         return d.year * 10000 + d.month * 100 + d.day
 
-    @DirectWord("( datetime -- timestamp )", "Convert datetime to Unix timestamp (seconds)", ">TIMESTAMP")
+    @ForthicDirectWord("( datetime -- timestamp )", "Convert datetime to Unix timestamp (seconds)", ">TIMESTAMP")
     async def to_TIMESTAMP(self, interp: Interpreter) -> None:
         """Convert datetime to Unix timestamp."""
         dt = interp.stack_pop()
@@ -322,7 +322,7 @@ TODAY 7 ADD-DAYS
         timestamp = int(dt.timestamp())
         interp.stack_push(timestamp)
 
-    @DirectWord("( timestamp -- datetime )", "Convert Unix timestamp (seconds) to datetime", "TIMESTAMP>DATETIME")
+    @ForthicDirectWord("( timestamp -- datetime )", "Convert Unix timestamp (seconds) to datetime", "TIMESTAMP>DATETIME")
     async def TIMESTAMP_to_DATETIME(self, interp: Interpreter) -> None:
         """Convert Unix timestamp to datetime."""
         timestamp = interp.stack_pop()
@@ -336,7 +336,7 @@ TODAY 7 ADD-DAYS
         dt = datetime.fromtimestamp(timestamp, tz=tz)
         interp.stack_push(dt)
 
-    @DirectWord("( date num_days -- date )", "Add days to a date", "ADD-DAYS")
+    @ForthicDirectWord("( date num_days -- date )", "Add days to a date", "ADD-DAYS")
     async def ADD_DAYS(self, interp: Interpreter) -> None:
         """Add days to a date."""
         num_days = interp.stack_pop()
@@ -358,7 +358,7 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(d + timedelta(days=num_days))
 
-    @DirectWord("( date1 date2 -- num_days )", "Get difference in days between dates (date1 - date2)", "SUBTRACT-DATES")
+    @ForthicDirectWord("( date1 date2 -- num_days )", "Get difference in days between dates (date1 - date2)", "SUBTRACT-DATES")
     async def SUBTRACT_DATES(self, interp: Interpreter) -> None:
         """Calculate difference in days between two dates."""
         date2 = interp.stack_pop()

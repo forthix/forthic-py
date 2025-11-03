@@ -2,11 +2,11 @@
 
 from .decorators import (
     DecoratedModule,
-    DirectWord,
+    ForthicDirectWord,
     register_module_doc,
 )
 from .decorators import (
-    Word as WordDecorator,
+    ForthicWord as WordDecorator,
 )
 from .errors import (
     CodeLocationData,
@@ -59,7 +59,7 @@ __all__ = [
     "dup_interpreter",
     # Decorators
     "WordDecorator",
-    "DirectWord",
+    "ForthicDirectWord",
     "DecoratedModule",
     "register_module_doc",
     # Module system

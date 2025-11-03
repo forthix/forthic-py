@@ -1,31 +1,31 @@
-"""Tests for decorator system (@Word, @DirectWord, DecoratedModule)."""
+"""Tests for decorator system (@ForthicWord, @ForthicDirectWord, DecoratedModule)."""
 
 import pytest
 
 from forthic import (
     DecoratedModule,
-    DirectWord,
+    ForthicDirectWord,
     Interpreter,
     WordOptions,
     register_module_doc,
 )
 from forthic import (
-    WordDecorator as Word,
+    WordDecorator as ForthicWord,
 )
 
 
 class TestWordDecorator:
-    """Test @Word decorator functionality."""
+    """Test @ForthicWord decorator functionality."""
 
     @pytest.mark.asyncio
     async def test_simple_word(self) -> None:
-        """Test basic @Word decorator with simple parameters."""
+        """Test basic @ForthicWord decorator with simple parameters."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
 
-            @Word("( a:number b:number -- sum:number )", "Add two numbers")
+            @ForthicWord("( a:number b:number -- sum:number )", "Add two numbers")
             async def ADD(self, a: int, b: int) -> int:
                 return a + b
 
@@ -39,13 +39,13 @@ class TestWordDecorator:
 
     @pytest.mark.asyncio
     async def test_word_with_custom_name(self) -> None:
-        """Test @Word decorator with custom word name."""
+        """Test @ForthicWord decorator with custom word name."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
 
-            @Word("( a:number b:number -- product:number )", "Multiply", "*")
+            @ForthicWord("( a:number b:number -- product:number )", "Multiply", "*")
             async def MULTIPLY(self, a: int, b: int) -> int:
                 return a * b
 
@@ -59,13 +59,13 @@ class TestWordDecorator:
 
     @pytest.mark.asyncio
     async def test_word_no_inputs(self) -> None:
-        """Test @Word with no inputs."""
+        """Test @ForthicWord with no inputs."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
 
-            @Word("( -- value:number )", "Push 42")
+            @ForthicWord("( -- value:number )", "Push 42")
             async def ANSWER(self) -> int:
                 return 42
 
@@ -79,14 +79,14 @@ class TestWordDecorator:
 
     @pytest.mark.asyncio
     async def test_word_returns_none(self) -> None:
-        """Test @Word that returns None (nothing pushed to stack)."""
+        """Test @ForthicWord that returns None (nothing pushed to stack)."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
                 self.called = False
 
-            @Word("( -- )", "Set flag")
+            @ForthicWord("( -- )", "Set flag")
             async def SET_FLAG(self) -> None:
                 self.called = True
                 return None
@@ -104,13 +104,13 @@ class TestWordDecorator:
 
     @pytest.mark.asyncio
     async def test_word_with_options(self) -> None:
-        """Test @Word with WordOptions parameter."""
+        """Test @ForthicWord with WordOptions parameter."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
 
-            @Word(
+            @ForthicWord(
                 "( array:list [options:WordOptions] -- result:list )", "Process array with options"
             )
             async def PROCESS(self, array: list, options: dict) -> list:
@@ -135,17 +135,17 @@ class TestWordDecorator:
 
 
 class TestDirectWordDecorator:
-    """Test @DirectWord decorator functionality."""
+    """Test @ForthicDirectWord decorator functionality."""
 
     @pytest.mark.asyncio
     async def test_direct_word_manual_stack(self) -> None:
-        """Test @DirectWord with manual stack manipulation."""
+        """Test @ForthicDirectWord with manual stack manipulation."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
 
-            @DirectWord("( a:number b:number -- result:number )", "Swap and subtract")
+            @ForthicDirectWord("( a:number b:number -- result:number )", "Swap and subtract")
             async def SWAP_SUB(self, interp: Interpreter) -> None:
                 b = interp.stack_pop()
                 a = interp.stack_pop()
@@ -162,13 +162,13 @@ class TestDirectWordDecorator:
 
     @pytest.mark.asyncio
     async def test_direct_word_custom_name(self) -> None:
-        """Test @DirectWord with custom name."""
+        """Test @ForthicDirectWord with custom name."""
 
         class TestModule(DecoratedModule):
             def __init__(self):
                 super().__init__("test")
 
-            @DirectWord("( item:any n:number -- )", "Duplicate n times", "<DUP")
+            @ForthicDirectWord("( item:any n:number -- )", "Duplicate n times", "<DUP")
             async def l_DUP(self, interp: Interpreter) -> None:
                 n = interp.stack_pop()
                 item = interp.stack_pop()
@@ -196,15 +196,15 @@ class TestDecoratedModule:
             def __init__(self):
                 super().__init__("math")
 
-            @Word("( a:number b:number -- sum:number )", "Add")
+            @ForthicWord("( a:number b:number -- sum:number )", "Add")
             async def ADD(self, a: int, b: int) -> int:
                 return a + b
 
-            @Word("( a:number b:number -- diff:number )", "Subtract")
+            @ForthicWord("( a:number b:number -- diff:number )", "Subtract")
             async def SUB(self, a: int, b: int) -> int:
                 return a - b
 
-            @Word("( a:number b:number -- product:number )", "Multiply")
+            @ForthicWord("( a:number b:number -- product:number )", "Multiply")
             async def MUL(self, a: int, b: int) -> int:
                 return a * b
 
@@ -229,11 +229,11 @@ class TestDecoratedModule:
             def __init__(self):
                 super().__init__("test")
 
-            @Word("( a:number b:number -- sum:number )", "Add two numbers")
+            @ForthicWord("( a:number b:number -- sum:number )", "Add two numbers")
             async def ADD(self, a: int, b: int) -> int:
                 return a + b
 
-            @DirectWord("( -- )", "Do nothing")
+            @ForthicDirectWord("( -- )", "Do nothing")
             async def NOP(self, interp: Interpreter) -> None:
                 pass
 
@@ -279,7 +279,7 @@ class TestModuleDocumentation:
                     """,
                 )
 
-            @Word("( a:number b:number -- sum:number )", "Add")
+            @ForthicWord("( a:number b:number -- sum:number )", "Add")
             async def ADD(self, a: int, b: int) -> int:
                 return a + b
 

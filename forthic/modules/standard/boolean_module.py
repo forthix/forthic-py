@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
 
-from ...decorators import DecoratedModule, DirectWord, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import ForthicWord as WordDecorator
 
 
 class BooleanModule(DecoratedModule):
@@ -70,7 +70,7 @@ Comparison, logic, and membership operations for boolean values and conditions.
     # Logic
     # ==================
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:boolean b:boolean -- result:boolean ) OR ( bools:boolean[] -- result:boolean )",
         "Logical OR of two values or array",
         "OR",
@@ -91,7 +91,7 @@ Comparison, logic, and membership operations for boolean values and conditions.
         a = interp.stack_pop()
         interp.stack_push(a or b)
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( a:boolean b:boolean -- result:boolean ) OR ( bools:boolean[] -- result:boolean )",
         "Logical AND of two values or array",
         "AND",

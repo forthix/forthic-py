@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
 
-from ...decorators import DecoratedModule, DirectWord, register_module_doc
-from ...decorators import Word as WordDecorator
+from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import ForthicWord as WordDecorator
 
 
 class ArrayModule(DecoratedModule):
@@ -67,7 +67,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             return len(container)
         return 0
 
-    @DirectWord("( container:any n:number -- item:any )", "Get nth element from array or record")
+    @ForthicDirectWord("( container:any n:number -- item:any )", "Get nth element from array or record")
     async def NTH(self, interp: Interpreter) -> None:
         n = interp.stack_pop()
         container = interp.stack_pop()
@@ -197,7 +197,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             rest_keys = keys[n:]
             return [container[k] for k in rest_keys]
 
-    @DirectWord("( container:any value:any -- key:any )", "Find key of value in container")
+    @ForthicDirectWord("( container:any value:any -- key:any )", "Find key of value in container")
     async def KEY_OF(self, interp: Interpreter) -> None:
         value = interp.stack_pop()
         container = interp.stack_pop()
@@ -223,7 +223,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     # Transform
     # ==================
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( items:any forthic:string [options:WordOptions] -- mapped:any )",
         "Map function over items. Options: with_key (bool), push_error (bool), depth (num), push_rest (bool)",
     )
@@ -345,7 +345,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return container
 
-    @DirectWord("( container:any -- elements:any )", "Unpack array or record elements onto stack")
+    @ForthicDirectWord("( container:any -- elements:any )", "Unpack array or record elements onto stack")
     async def UNPACK(self, interp: Interpreter) -> None:
         container = interp.stack_pop()
 
@@ -433,7 +433,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     # Filter
     # ==================
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( container:any forthic:string [options:WordOptions] -- filtered:any )",
         "Filter items with predicate. Options: with_key (bool)",
     )
@@ -737,7 +737,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return result
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( items:any forthic:string [options:WordOptions] -- grouped:any )",
         "Group items by function result. Options: with_key (bool)"
     )
@@ -820,7 +820,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     # Utility
     # ==================
 
-    @DirectWord(
+    @ForthicDirectWord(
         "( items:any forthic:string [options:WordOptions] -- )",
         "Execute forthic for each item. Options: with_key (bool), push_error (bool)",
     )
@@ -883,7 +883,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
         if flags["push_error"]:
             interp.stack_push(errors)
 
-    @DirectWord("( container:list initial:any forthic:str -- result:any )", "Reduce array or record with accumulator")
+    @ForthicDirectWord("( container:list initial:any forthic:str -- result:any )", "Reduce array or record with accumulator")
     async def REDUCE(self, interp: Interpreter) -> None:
         forthic = interp.stack_pop()
         initial = interp.stack_pop()
@@ -974,7 +974,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return result
 
-    @DirectWord("( item:any forthic:string num_times:number -- )", "Repeat execution of forthic num_times", "<REPEAT")
+    @ForthicDirectWord("( item:any forthic:string num_times:number -- )", "Repeat execution of forthic num_times", "<REPEAT")
     async def l_REPEAT(self, interp: Interpreter) -> None:
         num_times = interp.stack_pop()
         forthic = interp.stack_pop()
