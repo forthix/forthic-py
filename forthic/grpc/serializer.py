@@ -1,8 +1,8 @@
 """
-Phase 2: Serialization/Deserialization for all basic Forthic types
-Handles: int, float, string, bool, None, list, dict
-Phase 4: Added DataFrame support (serialized as records)
-Phase 8: Added temporal types (datetime, date)
+Serialization/Deserialization for all basic Forthic types
+int, float, string, bool, None, list, dict
+DataFrame support (serialized as records)
+Temporal types (datetime, date)
 """
 import re
 from typing import Any

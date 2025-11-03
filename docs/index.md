@@ -1,8 +1,8 @@
 # Forthic Module Documentation
 
-Generated: 2025-10-16T21:40:22.787322
+Generated: 2025-11-02T19:55:01.639958
 
-**8 modules** with **145 words** total
+**9 modules** with **222 words** total
 
 ## Modules
 
@@ -14,6 +14,7 @@ Generated: 2025-10-16T21:40:22.787322
 | [datetime](./modules/datetime.md) | 15 | Date and time operations using Python's datetime with timezone support |
 | [json](./modules/json.md) | 3 | JSON serialization, parsing, and formatting operations |
 | [math](./modules/math.md) | 30 | Mathematical operations and utilities including arithmetic, aggregation, and conversions |
+| [pandas](./modules/pandas.md) | 77 | Pandas DataFrame and Series operations for data manipulation and analysis |
 | [record](./modules/record.md) | 10 | Record (object/dictionary) manipulation operations for working with key-value data structures |
 | [string](./modules/string.md) | 17 | String manipulation and processing operations with regex and URL encoding support |
 
@@ -25,5 +26,6 @@ Generated: 2025-10-16T21:40:22.787322
 - **[datetime](./modules/datetime.md)**: >DATE, >DATETIME, >TIME, >TIMESTAMP, ADD-DAYS, ... (10 more)
 - **[json](./modules/json.md)**: >JSON, JSON-PRETTIFY, JSON>
 - **[math](./modules/math.md)**: *, +, -, /, <, ... (25 more)
+- **[pandas](./modules/pandas.md)**: <DF!, >DF, >SERIES, DF.AGG, DF.APPEND-ROW, ... (72 more)
 - **[record](./modules/record.md)**: <DEL, <REC!, INVERT_KEYS, KEYS, REC, ... (5 more)
 - **[string](./modules/string.md)**: /N, /R, /T, >STR, ASCII, ... (12 more)

@@ -1,5 +1,4 @@
 """
-Phase 11.7: Python Runtime Manager
 Singleton for managing gRPC connections to remote runtimes
 Reuses connections and provides centralized connection management
 """

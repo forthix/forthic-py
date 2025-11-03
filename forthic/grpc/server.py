@@ -1,5 +1,5 @@
 """
-Phase 10.5 gRPC Server for Forthic
+gRPC Server for Forthic
 Implements stack-based execution and module discovery with configuration support
 """
 import grpc
@@ -34,7 +34,7 @@ STANDARD_MODULES = {
 
 
 class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
-    """Phase 10.5: Stack-based execution with module discovery and configuration support"""
+    """Stack-based execution with module discovery and configuration support"""
 
     def __init__(self, modules_config: str | None = None):
         """
@@ -136,14 +136,14 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
             print(f"[EXECUTE_SEQUENCE] Traceback:", flush=True)
             traceback.print_exc()
 
-            # Phase 9: Capture rich error context
+            # Capture rich error context
             # For sequences, we include the full word sequence in context
             error = self._build_error_info(e, word_name=None, context={'word_sequence': ', '.join(word_names)})
             return forthic_runtime_pb2.ExecuteSequenceResponse(error=error)
 
     def _build_error_info(self, exception: Exception, word_name: str = None, context: dict = None) -> 'forthic_runtime_pb2.ErrorInfo':
         """
-        Phase 9: Build rich error information from an exception
+        Build rich error information from an exception
 
         Args:
             exception: The exception that was raised
@@ -160,25 +160,12 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
         # Get error type name
         error_type = type(exception).__name__
 
-        # SURGICAL LOG 1: Check what we extracted
-        print(f"[SURGICAL-1] exception type: {type(exception)}", flush=True)
-        print(f"[SURGICAL-1] exception.__name__: {type(exception).__name__}", flush=True)
-        print(f"[SURGICAL-1] error_type variable: '{error_type}' (len={len(error_type)})", flush=True)
-        print(f"[SURGICAL-1] tb_lines count: {len(tb_lines)}", flush=True)
-        print(f"[SURGICAL-1] stack_trace variable: {stack_trace[:2] if len(stack_trace) > 2 else stack_trace}", flush=True)
-        print(f"[SURGICAL-1] stack_trace is list: {isinstance(stack_trace, list)}", flush=True)
-
-        print(f"[_build_error_info] error_type={error_type}, stack_trace_lines={len(stack_trace)}", flush=True)
-        print(f"[_build_error_info] word_name={word_name}, context={context}", flush=True)
-
         # Build context dictionary
         error_context = {}
         if word_name:
             error_context['word_name'] = word_name
         if context:
             error_context.update(context)
-
-        print(f"[_build_error_info] error_context={error_context}", flush=True)
 
         # Try to extract module information from the traceback
         module_name = None
@@ -196,13 +183,6 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
             elif 'forthic/grpc/' in filename:
                 word_location = f"{filename}:{frame_summary.lineno}"
 
-        # SURGICAL LOG 2: Check variables RIGHT before creating ErrorInfo
-        print(f"[SURGICAL-2] BEFORE creating ErrorInfo:", flush=True)
-        print(f"[SURGICAL-2]   message: '{str(exception)}'", flush=True)
-        print(f"[SURGICAL-2]   runtime: 'python'", flush=True)
-        print(f"[SURGICAL-2]   stack_trace var: type={type(stack_trace)}, len={len(stack_trace)}, first={stack_trace[0][:50] if stack_trace else 'EMPTY'}", flush=True)
-        print(f"[SURGICAL-2]   error_type var: type={type(error_type)}, value='{error_type}', len={len(error_type)}", flush=True)
-
         # Build ErrorInfo message
         error_info = forthic_runtime_pb2.ErrorInfo(
             message=str(exception),
@@ -211,16 +191,6 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
             error_type=error_type
         )
 
-        # SURGICAL LOG 3: Check what actually got set in the ErrorInfo
-        print(f"[SURGICAL-3] AFTER creating ErrorInfo:", flush=True)
-        print(f"[SURGICAL-3]   error_info.message: '{error_info.message}'", flush=True)
-        print(f"[SURGICAL-3]   error_info.runtime: '{error_info.runtime}'", flush=True)
-        print(f"[SURGICAL-3]   error_info.error_type: '{error_info.error_type}' (len={len(error_info.error_type)})", flush=True)
-        print(f"[SURGICAL-3]   error_info.stack_trace: type={type(error_info.stack_trace)}, len={len(error_info.stack_trace)}", flush=True)
-        print(f"[SURGICAL-3]   First stack line: {error_info.stack_trace[0][:50] if len(error_info.stack_trace) > 0 else 'EMPTY'}", flush=True)
-
-        print(f"[_build_error_info] Created ErrorInfo: message={error_info.message}, error_type={error_info.error_type}", flush=True)
-        print(f"[_build_error_info] Stack trace count: {len(error_info.stack_trace)}", flush=True)
 
         # Add optional fields
         if word_location:
@@ -228,30 +198,9 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
         if module_name:
             error_info.module_name = module_name
 
-        # SURGICAL LOG 4: Before adding context
-        print(f"[SURGICAL-4] BEFORE adding context:", flush=True)
-        print(f"[SURGICAL-4]   error_context dict: {error_context}", flush=True)
-        print(f"[SURGICAL-4]   error_context has {len(error_context)} items", flush=True)
-
         # Add context
         for key, value in error_context.items():
-            print(f"[SURGICAL-4]   Adding context: {key} = {str(value)}", flush=True)
             error_info.context[key] = str(value)
-
-        # SURGICAL LOG 5: After adding context
-        print(f"[SURGICAL-5] AFTER adding context:", flush=True)
-        print(f"[SURGICAL-5]   error_info.context: {dict(error_info.context)}", flush=True)
-        print(f"[SURGICAL-5]   error_info.context has {len(error_info.context)} items", flush=True)
-
-        print(f"[_build_error_info] Final context: {dict(error_info.context)}", flush=True)
-
-        # SURGICAL LOG 6: Right before return - final state
-        print(f"[SURGICAL-6] FINAL ErrorInfo state before return:", flush=True)
-        print(f"[SURGICAL-6]   message: '{error_info.message}'", flush=True)
-        print(f"[SURGICAL-6]   runtime: '{error_info.runtime}'", flush=True)
-        print(f"[SURGICAL-6]   error_type: '{error_info.error_type}'", flush=True)
-        print(f"[SURGICAL-6]   stack_trace len: {len(error_info.stack_trace)}", flush=True)
-        print(f"[SURGICAL-6]   context: {dict(error_info.context)}", flush=True)
 
         return error_info
 
@@ -264,7 +213,7 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
         # (to avoid state pollution between requests)
         interp = StandardInterpreter()
 
-        # Phase 4: Register runtime-specific modules in fresh interpreter
+        # Register runtime-specific modules in fresh interpreter
         for module_name, module in self.runtime_modules.items():
             interp.register_module(module)
 

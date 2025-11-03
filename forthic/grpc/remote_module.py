@@ -1,6 +1,4 @@
 """
-Phase 11.6: RemoteModule - Module that wraps TypeScript words
-
 RemoteModule is a proxy module that discovers and wraps words from a remote
 runtime (e.g., TypeScript). Each word becomes a RemoteWord that delegates
 execution via gRPC.

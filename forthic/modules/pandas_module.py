@@ -857,7 +857,13 @@ DF>
 
         method = options.get("method")
         if method:
-            return df.fillna(method=method)
+            # Use new pandas API: df.ffill() or df.bfill() instead of fillna(method=...)
+            if method == "ffill":
+                return df.ffill()
+            elif method == "bfill":
+                return df.bfill()
+            else:
+                raise ValueError(f"Invalid method: {method}. Use 'ffill' or 'bfill'")
         else:
             return df.fillna(value)
 

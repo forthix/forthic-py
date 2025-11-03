@@ -10,8 +10,8 @@ from forthic.grpc.module_loader import load_modules_from_config, ModuleLoadError
 from forthic.decorators import DecoratedModule, ForthicWord
 
 
-# Test modules for loading
-class TestModuleA(DecoratedModule):
+# Test modules for loading (fixture modules, not test classes)
+class FixtureModuleA(DecoratedModule):
     """Simple test module"""
 
     def __init__(self):
@@ -22,7 +22,7 @@ class TestModuleA(DecoratedModule):
         return a + b
 
 
-class TestModuleB(DecoratedModule):
+class FixtureModuleB(DecoratedModule):
     """Another test module"""
 
     def __init__(self):
@@ -42,7 +42,7 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleA',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
                     'optional': False,
                     'description': 'Test module A'
                 }
@@ -57,7 +57,7 @@ class TestModuleLoader:
             modules = load_modules_from_config(config_path)
 
             assert 'test_a' in modules
-            assert isinstance(modules['test_a'], TestModuleA)
+            assert isinstance(modules['test_a'], FixtureModuleA)
             assert hasattr(modules['test_a'], 'ADD')
 
         finally:
@@ -69,12 +69,12 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleA',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
                     'optional': False
                 },
                 {
                     'name': 'test_b',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleB',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleB',
                     'optional': False
                 }
             ]
@@ -90,8 +90,8 @@ class TestModuleLoader:
             assert len(modules) == 2
             assert 'test_a' in modules
             assert 'test_b' in modules
-            assert isinstance(modules['test_a'], TestModuleA)
-            assert isinstance(modules['test_b'], TestModuleB)
+            assert isinstance(modules['test_a'], FixtureModuleA)
+            assert isinstance(modules['test_b'], FixtureModuleB)
 
         finally:
             Path(config_path).unlink()
@@ -151,7 +151,7 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleA',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
                     'optional': False
                 },
                 {
@@ -161,7 +161,7 @@ class TestModuleLoader:
                 },
                 {
                     'name': 'test_b',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleB',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleB',
                     'optional': False
                 }
             ]

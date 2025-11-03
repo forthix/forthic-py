@@ -31,7 +31,7 @@ class TestServerConfiguration:
             'modules': [
                 {
                     'name': 'test_module',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleA',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
                     'optional': False,
                     'description': 'Test module for server config'
                 }
@@ -87,12 +87,12 @@ class TestServerConfiguration:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleA',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
                     'optional': False
                 },
                 {
                     'name': 'test_b',
-                    'import_path': 'tests.unit.grpc.test_module_loader:TestModuleB',
+                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleB',
                     'optional': False
                 }
             ]

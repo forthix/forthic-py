@@ -1,6 +1,4 @@
 """
-Phase 11.8: RemoteRuntimeModule - Forthic-level words for connecting to remote runtimes
-
 This module provides words that allow Forthic code to connect to remote runtimes
 (like TypeScript, Ruby, etc.) and load their modules dynamically.
 

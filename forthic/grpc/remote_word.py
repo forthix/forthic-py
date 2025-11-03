@@ -1,6 +1,4 @@
 """
-Phase 11.5: RemoteWord - Word that executes in a remote runtime via gRPC
-
 RemoteWord is a proxy word that delegates execution to a remote runtime
 (e.g., TypeScript). When executed:
 1. Captures current interpreter stack
