@@ -1,4 +1,4 @@
-"""Tests for Phase 11.9: StandardInterpreter integration with RemoteRuntimeModule.
+"""Tests for StandardInterpreter integration with RemoteRuntimeModule.
 
 Verifies that:
 1. RemoteRuntimeModule is auto-registered in StandardInterpreter

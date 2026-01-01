@@ -82,7 +82,7 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
             word_name = request.word_name
             print(f"[EXECUTE_WORD] word='{word_name}' stack_size={len(request.stack)}", flush=True)
 
-            # Deserialize the entire stack (Phase 2: all types)
+            # Deserialize the entire stack (all types)
             stack = [deserialize_value(sv) for sv in request.stack]
             print(f"[EXECUTE_WORD] Deserialized stack: {[type(x).__name__ for x in stack]}", flush=True)
 
@@ -101,7 +101,7 @@ class ForthicRuntimeServicer(forthic_runtime_pb2_grpc.ForthicRuntimeServicer):
             print(f"[EXECUTE_WORD] Traceback:", flush=True)
             traceback.print_exc()
 
-            # Phase 9: Capture rich error context
+            # Capture rich error context
             error = self._build_error_info(e, word_name)
             return forthic_runtime_pb2.ExecuteWordResponse(error=error)
 
@@ -361,7 +361,7 @@ def serve(port=50051, modules_config: str | None = None):
     server.start()
 
     print(f"Forthic Python gRPC server listening on port {port}")
-    print("Phase 10.5: Configuration-based module loading")
+    print("Configuration-based module loading")
     print("Features:")
     print("  - Full StandardInterpreter with all stdlib words")
     print("  - Runtime-specific module discovery (ListModules, GetModuleInfo)")

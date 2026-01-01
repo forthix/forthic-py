@@ -1,5 +1,5 @@
 """
-Tests for RemoteRuntimeModule - Phase 11.8
+Tests for RemoteRuntimeModule
 """
 
 import pytest

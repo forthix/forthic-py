@@ -76,7 +76,7 @@ class ForthicRuntimeServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ListModules(self, request, context):
-        """Phase 3: Module discovery
+        """Module discovery
         List available runtime-specific modules (excludes standard library)
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)

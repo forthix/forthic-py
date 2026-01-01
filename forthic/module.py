@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 # Type alias for word handlers
 WordHandler = Callable[["Interpreter"], Coroutine[Any, Any, None]]
 
+# Type alias for error handlers
+WordErrorHandler = Callable[[Exception, "Word", "Interpreter"], Coroutine[Any, Any, None]]
+
 
 # -------------------------------------
 # Variable
@@ -60,12 +63,45 @@ class Word:
         self.name = name
         self.string = name
         self.location: CodeLocation | None = None
+        self.error_handlers: list[WordErrorHandler] = []
 
     def set_location(self, location: CodeLocation | None) -> None:
         self.location = location
 
     def get_location(self) -> CodeLocation | None:
         return self.location
+
+    def add_error_handler(self, handler: WordErrorHandler) -> None:
+        """Add an error handler to this word."""
+        self.error_handlers.append(handler)
+
+    def remove_error_handler(self, handler: WordErrorHandler) -> None:
+        """Remove a specific error handler."""
+        try:
+            self.error_handlers.remove(handler)
+        except ValueError:
+            pass  # Handler not in list
+
+    def clear_error_handlers(self) -> None:
+        """Remove all error handlers."""
+        self.error_handlers.clear()
+
+    def get_error_handlers(self) -> list[WordErrorHandler]:
+        """Get a copy of the error handlers list."""
+        return self.error_handlers.copy()
+
+    async def try_error_handlers(self, error: Exception, interp: Interpreter) -> bool:
+        """
+        Try error handlers in order until one succeeds.
+        Returns True if any handler succeeded, False otherwise.
+        """
+        for handler in self.error_handlers:
+            try:
+                await handler(error, self, interp)
+                return True  # Handler succeeded
+            except Exception:
+                continue  # Try next handler
+        return False  # No handler succeeded
 
     async def execute(self, interp: Interpreter) -> None:
         """Execute this word. Must be overridden by subclasses."""
@@ -187,6 +223,33 @@ class ExecuteWord(Word):
         await self.target_word.execute(interp)
 
 
+class ModuleWord(Word):
+    """Word that executes a handler function with error handling support.
+
+    Used for module words created via decorators or add_module_word().
+    Integrates per-word error handler functionality.
+    """
+
+    def __init__(self, name: str, handler: WordHandler):
+        super().__init__(name)
+        self.handler = handler
+
+    async def execute(self, interp: Interpreter) -> None:
+        from .errors import IntentionalStopError
+
+        try:
+            await self.handler(interp)
+        except IntentionalStopError:
+            # Never handle intentional flow control errors
+            raise
+        except Exception as e:
+            # Try error handlers
+            handled = await self.try_error_handlers(e, interp)
+            if not handled:
+                raise  # Re-raise if not handled
+            # If handled, execution continues (error suppressed)
+
+
 # -------------------------------------
 # Module
 
@@ -295,11 +358,11 @@ class Module:
 
     def add_module_word(
         self, word_name: str, word_func: Callable[[Interpreter], Coroutine[Any, Any, None]]
-    ) -> None:
+    ) -> ModuleWord:
         """Add a word with a handler function."""
-        word = Word(word_name)
-        word.execute = word_func  # type: ignore
+        word = ModuleWord(word_name, word_func)
         self.add_exportable_word(word)
+        return word
 
     def exportable_words(self) -> list[Word]:
         """Get list of exportable words."""
