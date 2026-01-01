@@ -50,7 +50,7 @@ from .tokenizer import (
 )
 from .word_options import WordOptions, pop_options_if_present
 
-__version__ = "0.1.0"
+__version__ = "0.5.0"
 
 __all__ = [
     # Core

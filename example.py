@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Example demonstrating Phase 1 Forthic Python runtime."""
+"""Example demonstrating Forthic Python runtime."""
 
 import asyncio
 
@@ -7,7 +7,7 @@ from forthic import Interpreter, Module, PushValueWord
 
 
 async def main() -> None:
-    print("=== Forthic Python Runtime - Phase 1 Demo ===\n")
+    print("=== Forthic Python Runtime ===\n")
 
     # Create interpreter
     interp = Interpreter()
@@ -79,9 +79,6 @@ async def main() -> None:
     await interp.run("{mymodule : WORD 42 ; }")
     module = interp.find_module("mymodule")
     print(f"   Created module: {module.get_name()}\n")
-
-    print("=== Phase 1 Complete! ===")
-    print("\nNext: Phase 2 will add the @Word decorator system")
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ def serialize_value(value: Any) -> forthic_runtime_pb2.StackValue:
         stack_value.record_value.CopyFrom(record_value)
         return stack_value
 
-    # Handle pandas DataFrame (Phase 4)
+    # Handle pandas DataFrame
     # Serialize as array of records for cross-language compatibility
     if HAS_PANDAS and isinstance(value, pd.DataFrame):
         records = value.to_dict("records")

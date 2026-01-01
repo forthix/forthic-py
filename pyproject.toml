@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forthic-py"
-version = "0.1.0"
+version = "0.5.0"
 description = "A modern Python runtime for Forthic - a stack-based, concatenative programming language"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,9 +49,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://forthic.org"
-Documentation = "https://docs.forthic.org/python"
-Repository = "https://github.com/forthic/forthic"
+Homepage = "https://forthix.com"
+Repository = "https://github.com/forthix/forthic-py"
 
 [project.scripts]
 forthic-generate-docs = "scripts.generate_docs:main"

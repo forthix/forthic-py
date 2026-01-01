@@ -405,7 +405,23 @@ class Tokenizer:
             self._advance_position(1)
             if self._is_whitespace(char):
                 break
-            if char in [";", "[", "]", "{", "}", "#"]:
+            if char == "[":
+                # Special case: if token contains 'T', this is likely a zoned datetime
+                # Include the bracketed timezone as part of the token
+                if "T" in self.token_string:
+                    self.token_string += char
+                    # Continue gathering until closing bracket
+                    while self.input_pos < len(self.input_string):
+                        char = self.input_string[self.input_pos]
+                        self._advance_position(1)
+                        self.token_string += char
+                        if char == "]":
+                            break
+                else:
+                    # Otherwise, '[' is a delimiter (for arrays)
+                    self._advance_position(-1)
+                    break
+            elif char in [";", "]", "{", "}", "#"]:
                 self._advance_position(-1)
                 break
             else:

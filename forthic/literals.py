@@ -105,7 +105,12 @@ def to_literal_date(timezone: ZoneInfo) -> LiteralHandler:
 def to_zoned_datetime(timezone: ZoneInfo) -> LiteralHandler:
     """Create a zoned datetime literal handler with timezone support.
 
-    Parses: 2025-05-24T10:15:00Z, 2025-05-24T10:15:00-05:00, 2025-05-24T10:15:00.
+    Parses ISO 8601 datetime with IANA timezone bracket notation:
+    - 2025-05-20T08:00:00[America/Los_Angeles]  (IANA timezone)
+    - 2025-05-20T08:00:00-07:00[America/Los_Angeles]  (offset + IANA)
+    - 2025-05-24T10:15:00Z  (UTC)
+    - 2025-05-24T10:15:00-05:00  (offset only)
+    - 2025-05-24T10:15:00  (uses default timezone)
     """
 
     def handler(s: str) -> datetime | None:
@@ -113,6 +118,29 @@ def to_zoned_datetime(timezone: ZoneInfo) -> LiteralHandler:
             return None
 
         try:
+            # Extract IANA timezone from brackets if present
+            bracket_match = re.search(r"\[([^\]]+)\]$", s)
+
+            if bracket_match:
+                # Extract IANA timezone name from brackets
+                tz_name = bracket_match.group(1)
+                tz = ZoneInfo(tz_name)
+
+                # Extract datetime string (before bracket)
+                datetime_str = s[: bracket_match.start()]
+
+                # Parse datetime (may have offset)
+                dt = datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
+
+                # If dt is naive, localize to timezone
+                if dt.tzinfo is None:
+                    return dt.replace(tzinfo=tz)
+                else:
+                    # Convert to specified timezone
+                    return dt.astimezone(tz)
+
+            # No brackets - handle as before
+
             # Handle explicit UTC (Z suffix)
             if s.endswith("Z"):
                 dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
@@ -128,7 +156,8 @@ def to_zoned_datetime(timezone: ZoneInfo) -> LiteralHandler:
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone)
             return dt
-        except ValueError:
+        except (ValueError, KeyError):
+            # KeyError can occur if timezone name is invalid
             return None
 
     return handler

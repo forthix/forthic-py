@@ -635,7 +635,7 @@ class StandardInterpreter(Interpreter):
         for module in stdlib:
             self.import_module(module._module, "")
 
-        # Phase 11: Auto-register RemoteRuntimeModule for gRPC multi-runtime support
+        # Auto-register RemoteRuntimeModule for gRPC multi-runtime support
         # This is optional - only loaded if grpc dependencies are available
         try:
             from .grpc.remote_runtime_module import RemoteRuntimeModule
