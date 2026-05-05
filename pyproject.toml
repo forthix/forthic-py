@@ -55,6 +55,7 @@ Repository = "https://github.com/forthix/forthic-py"
 [project.scripts]
 forthic-generate-docs = "scripts.generate_docs:main"
 forthic-py-server = "forthic.grpc.server:main"
+forthic-py-jsonrpc-server = "forthic.jsonrpc.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["forthic"]

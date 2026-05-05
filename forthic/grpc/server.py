@@ -9,23 +9,14 @@ import os
 import asyncio
 import traceback
 
-# Import generated proto files
-try:
-    from forthic.grpc import forthic_runtime_pb2
-    from forthic.grpc import forthic_runtime_pb2_grpc
-    from forthic.grpc.serializer import serialize_value, deserialize_value
-    from forthic.grpc.module_loader import load_modules_from_config, ModuleLoadError
-except ImportError:
-    print("Error: gRPC proto files not generated yet.")
-    print("Run: make generate-grpc")
-    sys.exit(1)
-
-# Import Forthic interpreter
-try:
-    from forthic.interpreter import StandardInterpreter
-except ImportError:
-    print("Error: Could not import StandardInterpreter")
-    sys.exit(1)
+# Import generated proto files. Re-raise ImportError (rather than sys.exit)
+# so that callers / tests can detect missing grpcio or proto codegen and
+# skip gracefully instead of aborting the whole process.
+from forthic.grpc import forthic_runtime_pb2
+from forthic.grpc import forthic_runtime_pb2_grpc
+from forthic.grpc.serializer import serialize_value, deserialize_value
+from forthic.grpc.module_loader import load_modules_from_config, ModuleLoadError
+from forthic.interpreter import StandardInterpreter
 
 # Standard library modules (available in all runtimes)
 STANDARD_MODULES = {
