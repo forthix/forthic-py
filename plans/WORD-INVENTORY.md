@@ -270,7 +270,22 @@ match ts), INDEX verify (both lowercase keys — matches), MAP `.outcomes`
 KEY FUNCTION (py agrees); py sorts None-last (matches rs's sanctioned
 order); check mixed-type ordering.
 
-**Batch 3 — records & JQ paths: TODO**
+**Batch 3 — records & JQ paths: DONE (feat/word-batch3)**
+JQ@ (null on miss, [] iterates + flattens conditionally, quoted keys,
+path arrays, insertion-order record indexing, strict [n] parse), JQ!
+(auto-creates by NEXT-segment kind, no [], pads arrays with NULL,
+empty path replaces container), JQ-DEL (silent no-ops, no []), MERGE
+(shallow, rec2 wins, shared keys keep rec1's position; REC-DEFAULTS
+dropped — migration: defaults-first MERGE, noting REC-DEFAULTS also
+overrode NULL/""), PICK (keys-list order, missing skipped), OMIT
+(stringified drop keys), HAS-KEY? (presence), DELETE (copy-on-write,
+integer-only array indexes, negative wraps once; <DEL dropped — it
+MUTATED in place), REC>ENTRIES/ENTRIES>REC (insertion-order round-trip
+identity; strict pair validation now shared with REC via build_record —
+REC no longer accepts malformed pairs). |REC@ was already removed in
+Batch 0. py has no prototype-pollution surface, so ts's assert_safe_key
+guard has no analog here. Spec: tests/unit/core/test_word_batch3.py;
+tier2 DELETE assertion un-deferred. Original spec:
 JQ@ (null on miss; `[]` iterates + flattens conditionally), JQ!
 (auto-creates by NEXT-segment kind, no `[]`, pads arrays with NULL), JQ-DEL
 (silent no-op, no `[]`), MERGE (shallow, rec2 wins; drop REC_DEFAULTS —

@@ -176,6 +176,12 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
     GROUP-BY-FIELD NULL-record error + missing-field "null" buckets;
     BY-FIELD falsy-skip; GROUPS-OF fractional truncation. Spec:
     tests/unit/core/test_word_batch2.py.
+  - **Batch 3 DONE (2026-07-12, feat/word-batch3).** JQ@/JQ!/JQ-DEL
+    (strict [n] parse, insertion-order indexing, NULL padding), MERGE
+    (REC-DEFAULTS dropped), PICK, OMIT (stringified drop keys),
+    HAS-KEY?, DELETE copy-on-write (<DEL dropped), REC>ENTRIES/
+    ENTRIES>REC round-trip; REC now validates pairs strictly (shared
+    build_record). Spec: tests/unit/core/test_word_batch3.py.
 - **Phase 4 — Interpolation redesign.** `${name}` contract into core;
   delete the bare-dot grammar (and `{.var}@` if present); PRINT shares.
   Port ts PR #41 / rs PR #15 directly.

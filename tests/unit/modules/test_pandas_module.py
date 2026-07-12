@@ -437,7 +437,7 @@ class TestColumnOperations:
     async def test_df_rename_cols_empty_mapping(self, interp, sample_df):
         """Test DF.RENAME-COLS with empty mapping returns unchanged DataFrame."""
         interp.stack_push(sample_df)
-        await interp.run("[[] []] REC pd.DF.RENAME-COLS")
+        await interp.run("[ ] REC pd.DF.RENAME-COLS")
 
         result = interp.stack_pop()
         assert list(result.columns) == ["name", "age", "city"]

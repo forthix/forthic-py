@@ -137,6 +137,12 @@ async def test_slice_span_guard():
         await interp.run("[ 1 ] 0 999999999 SLICE")
 
 
+@pytest.mark.asyncio
+async def test_delete_preserves_order_of_remaining_entries():
+    rest = await run(f"{ZAM} 'z' DELETE")
+    assert list(rest.keys()) == ["a", "m"]
+
+
 # ===== UNPACK on records =====
 
 

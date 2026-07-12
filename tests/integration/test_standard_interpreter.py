@@ -326,24 +326,24 @@ class TestArrayOperations:
 
     @pytest.mark.asyncio
     async def test_delete(self) -> None:
-        """Test DELETE operation."""
+        """Test DELETE operation (copy-on-write; classic <DEL dropped)."""
         interp = StandardInterpreter()
         await interp.run("""
-            [ "a" "b" "c" ] 1 <DEL
+            [ "a" "b" "c" ] 1 DELETE
         """)
         assert interp.stack_pop() == ["a", "c"]
 
         await interp.run("""
-            [["a" 1] ["b" 2] ["c" 3]] REC  "b" <DEL
+            [["a" 1] ["b" 2] ["c" 3]] REC  "b" DELETE
         """)
         rec = interp.stack_pop()
-        assert sorted(rec.keys()) == ["a", "c"]
+        assert list(rec.keys()) == ["a", "c"]
 
         await interp.run("""
-            [["a" 1] ["b" 2] ["c" 3]] REC  "d" <DEL
+            [["a" 1] ["b" 2] ["c" 3]] REC  "d" DELETE
         """)
         rec = interp.stack_pop()
-        assert sorted(rec.keys()) == ["a", "b", "c"]
+        assert list(rec.keys()) == ["a", "b", "c"]
 
 
 class TestDataStructureOperations:

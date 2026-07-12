@@ -118,36 +118,47 @@ class TestTransformOperations:
         assert result["b"]["y"] == 20
 
     @pytest.mark.asyncio
-    async def test_rec_defaults(self, interp):
-        """Test REC-DEFAULTS fills in missing/empty values."""
-        await interp.run("""
-            [['a' 1] ['b' NULL] ['c' '']] REC
-            [['b' 100] ['c' 200] ['d' 300]] REC-DEFAULTS
-        """)
-        rec = interp.stack_pop()
-        assert rec["a"] == 1
-        assert rec["b"] == 100  # NULL replaced
-        assert rec["c"] == 200  # "" replaced
-        assert rec["d"] == 300  # Added
+    async def test_rec_defaults_is_gone(self, interp):
+        """Tombstone: REC-DEFAULTS dropped for MERGE. Migration note:
+        REC-DEFAULTS also overrode NULL/"" values; MERGE is key-presence
+        only — write defaults first and MERGE the real record over them."""
+        with pytest.raises(Exception, match="REC-DEFAULTS"):
+            await interp.run("[ ] REC [ ] REC REC-DEFAULTS")
 
     @pytest.mark.asyncio
-    async def test_l_del_from_record(self, interp):
-        """Test <DEL removes key from record."""
+    async def test_merge_replaces_rec_defaults(self, interp):
+        """The REC-DEFAULTS use case via MERGE (defaults first)."""
+        await interp.run("""
+            [['b' 100] ['c' 200] ['d' 300]] REC
+            [['a' 1] ['b' 2]] REC
+            MERGE
+        """)
+        rec = interp.stack_pop()
+        assert rec == {"b": 2, "c": 200, "d": 300, "a": 1}
+
+    @pytest.mark.asyncio
+    async def test_classic_l_del_is_gone(self, interp):
+        """Tombstone: <DEL dropped for DELETE. Note <DEL MUTATED its input
+        in place; DELETE is copy-on-write."""
+        with pytest.raises(Exception, match="DEL"):
+            await interp.run("[['a' 1]] REC 'a' <DEL")
+
+    @pytest.mark.asyncio
+    async def test_delete_from_record(self, interp):
+        """DELETE removes key from record, preserving order (copy-on-write)."""
         await interp.run("""
             [['a' 1] ['b' 2] ['c' 3]] REC
-            'b' <DEL
+            'b' DELETE
         """)
         rec = interp.stack_pop()
-        assert rec["a"] == 1
-        assert "b" not in rec
-        assert rec["c"] == 3
+        assert list(rec.keys()) == ["a", "c"]
 
     @pytest.mark.asyncio
-    async def test_l_del_from_array(self, interp):
-        """Test <DEL removes index from array."""
+    async def test_delete_from_array(self, interp):
+        """DELETE removes index from array (copy-on-write)."""
         await interp.run("""
             [10 20 30 40]
-            1 <DEL
+            1 DELETE
         """)
         arr = interp.stack_pop()
         assert arr == [10, 30, 40]
