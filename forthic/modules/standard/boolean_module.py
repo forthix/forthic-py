@@ -5,7 +5,7 @@ Provides comparison, logical operations, and membership tests.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
@@ -17,7 +17,7 @@ from ...decorators import ForthicWord as WordDecorator
 class BooleanModule(DecoratedModule):
     """Comparison, logic, and membership operations for boolean values and conditions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("boolean")
         register_module_doc(
             BooleanModule,
@@ -44,27 +44,27 @@ Comparison, logic, and membership operations for boolean values and conditions.
 
     @WordDecorator("( a:any b:any -- equal:boolean )", "Test equality", "==")
     async def equals(self, a: Any, b: Any) -> bool:
-        return a == b
+        return cast(bool, a == b)
 
     @WordDecorator("( a:any b:any -- not_equal:boolean )", "Test inequality", "!=")
     async def not_equals(self, a: Any, b: Any) -> bool:
-        return a != b
+        return cast(bool, a != b)
 
     @WordDecorator("( a:any b:any -- less_than:boolean )", "Less than", "<")
     async def less_than(self, a: Any, b: Any) -> bool:
-        return a < b
+        return cast(bool, a < b)
 
     @WordDecorator("( a:any b:any -- less_equal:boolean )", "Less than or equal", "<=")
     async def less_than_or_equal(self, a: Any, b: Any) -> bool:
-        return a <= b
+        return cast(bool, a <= b)
 
     @WordDecorator("( a:any b:any -- greater_than:boolean )", "Greater than", ">")
     async def greater_than(self, a: Any, b: Any) -> bool:
-        return a > b
+        return cast(bool, a > b)
 
     @WordDecorator("( a:any b:any -- greater_equal:boolean )", "Greater than or equal", ">=")
     async def greater_than_or_equal(self, a: Any, b: Any) -> bool:
-        return a >= b
+        return cast(bool, a >= b)
 
     # ==================
     # Logic

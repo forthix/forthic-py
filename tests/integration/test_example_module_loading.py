@@ -2,12 +2,12 @@
 Integration test for ExampleModule loading via configuration
 Tests that the example module can be loaded and used in server
 """
-import pytest
-import os
 from pathlib import Path
 
-from forthic.grpc.server import ForthicRuntimeServicer
-from forthic.grpc.module_loader import load_modules_from_config
+import pytest
+
+from forthic.jsonrpc.module_loader import load_modules_from_config
+from forthic.jsonrpc.server import JsonRpcServicer
 
 
 class TestExampleModuleLoading:
@@ -54,14 +54,14 @@ class TestExampleModuleLoading:
         config_path = repo_root / "examples" / "example_modules_config.yaml"
 
         # Create servicer with config
-        servicer = ForthicRuntimeServicer(modules_config=str(config_path))
+        servicer = JsonRpcServicer(modules_config=str(config_path))
 
         # Check example module is in runtime modules
         assert "example" in servicer.runtime_modules
 
-        # Check interpreter has the module registered
-        example_mod = servicer.runtime_modules["example"]
-        assert example_mod in servicer.interpreter._registered_modules.values()
+        # Check the module is served over listModules
+        module_names = [m["name"] for m in servicer.list_modules({})["modules"]]
+        assert "example" in module_names
 
     @pytest.mark.asyncio
     async def test_example_module_words_executable(self):
@@ -71,7 +71,7 @@ class TestExampleModuleLoading:
         config_path = repo_root / "examples" / "example_modules_config.yaml"
 
         # Create servicer with config
-        servicer = ForthicRuntimeServicer(modules_config=str(config_path))
+        servicer = JsonRpcServicer(modules_config=str(config_path))
 
         # Test MULTIPLY word
         result = await servicer._execute_with_stack("MULTIPLY", [5, 3])

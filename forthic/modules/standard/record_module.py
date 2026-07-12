@@ -18,7 +18,7 @@ from ...decorators import ForthicWord as WordDecorator
 class RecordModule(DecoratedModule):
     """Record (object/dictionary) manipulation operations for working with key-value data structures."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("record")
         register_module_doc(
             RecordModule,
@@ -93,6 +93,7 @@ Record (object/dictionary) manipulation operations for working with key-value da
 
     @WordDecorator("( records:any field:any -- values:any )", "Map REC@ over array of records", "|REC@")
     async def pipe_REC_at(self, records: Any, field: Any) -> Any:
+        assert self._module.interp is not None
         # Push records back and field, then use MAP with REC@
         self._module.interp.stack_push(records)
         await self._module.interp.run(f"'{json.dumps(field)} REC@' MAP")

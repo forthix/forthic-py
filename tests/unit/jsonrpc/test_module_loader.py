@@ -1,13 +1,14 @@
 """
 Unit tests for module loader functionality
 """
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
 import yaml
 
-from forthic.grpc.module_loader import load_modules_from_config, ModuleLoadError
 from forthic.decorators import DecoratedModule, ForthicWord
+from forthic.jsonrpc.module_loader import ModuleLoadError, load_modules_from_config
 
 
 # Test modules for loading (fixture modules, not test classes)
@@ -42,7 +43,7 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleA',
                     'optional': False,
                     'description': 'Test module A'
                 }
@@ -69,12 +70,12 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleA',
                     'optional': False
                 },
                 {
                     'name': 'test_b',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleB',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleB',
                     'optional': False
                 }
             ]
@@ -151,7 +152,7 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleA',
                     'optional': False
                 },
                 {
@@ -161,7 +162,7 @@ class TestModuleLoader:
                 },
                 {
                     'name': 'test_b',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleB',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleB',
                     'optional': False
                 }
             ]
@@ -268,7 +269,7 @@ class TestModuleLoader:
             'modules': [
                 {
                     'name': 'bad_class',
-                    'import_path': 'tests.unit.grpc.test_module_loader:NonExistentClass',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:NonExistentClass',
                     'optional': False
                 }
             ]

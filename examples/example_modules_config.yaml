@@ -1,9 +1,9 @@
-# Example Module Configuration for Forthic gRPC Server
+# Example Module Configuration for the Forthic JSON-RPC Server
 #
 # This demonstrates how to load custom modules into the server.
 #
 # Usage:
-#   python -m forthic.grpc.server --modules-config examples/example_modules_config.yaml
+#   python -m forthic.jsonrpc.server --modules-config examples/example_modules_config.yaml
 
 modules:
   # Load the example module

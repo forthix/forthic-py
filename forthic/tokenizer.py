@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import IntEnum
 
-from .errors import InvalidWordNameError, UnterminatedStringError
+from .errors import CodeLocation, InvalidWordNameError, UnterminatedStringError
 
 
 class TokenType(IntEnum):
@@ -21,17 +21,6 @@ class TokenType(IntEnum):
     WORD = 10
     DOT_SYMBOL = 11
     EOS = 12  # End of string
-
-
-@dataclass
-class CodeLocation:
-    """Location information for a token in source code."""
-
-    source: str | None = None
-    line: int = 1
-    column: int = 1
-    start_pos: int = 0
-    end_pos: int = 0
 
 
 @dataclass
@@ -142,9 +131,8 @@ class Tokenizer:
 
     def _advance_position(self, num_chars: int) -> int:
         """Advance (or retreat) position in input string."""
-        i = 0
         if num_chars >= 0:
-            for i in range(num_chars):
+            for _ in range(num_chars):
                 if self.input_string[self.input_pos] == "\n":
                     self.line += 1
                     self.column = 1
@@ -152,7 +140,7 @@ class Tokenizer:
                     self.column += 1
                 self.input_pos += 1
         else:
-            for i in range(-num_chars):
+            for _ in range(-num_chars):
                 self.input_pos -= 1
                 if self.input_pos < 0 or self.column < 0:
                     raise ValueError("InvalidInputPositionError")

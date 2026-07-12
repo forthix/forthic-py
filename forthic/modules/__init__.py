@@ -25,7 +25,7 @@ __all__ = [
 
 # Optional: PandasModule (requires pandas to be installed)
 try:
-    from .pandas_module import PandasModule
+    from .pandas_module import PandasModule as PandasModule
 
     __all__.append("PandasModule")
 except ImportError:

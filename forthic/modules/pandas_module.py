@@ -10,15 +10,15 @@ Provides comprehensive pandas integration for Forthic including:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 try:
     import pandas as pd
-except ImportError:
+except ImportError as exc:
     raise ImportError(
         "Pandas module requires pandas to be installed. "
         "Install with: pip install 'forthic[pandas]' or pip install pandas"
-    )
+    ) from exc
 
 from ..decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ..decorators import ForthicWord as WordDecorator
@@ -27,7 +27,7 @@ from ..decorators import ForthicWord as WordDecorator
 class PandasModule(DecoratedModule):
     """Pandas DataFrame and Series operations for data manipulation and analysis."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("pandas")
         register_module_doc(
             PandasModule,
@@ -75,7 +75,7 @@ DF>
         """Convert DataFrame to list of records."""
         if df is None or df.empty:
             return []
-        return df.to_dict("records")
+        return cast(list, df.to_dict("records"))
 
     @WordDecorator(
         "( values:list [options:WordOptions] -- series:Series )",
@@ -102,7 +102,7 @@ DF>
         """Convert Series to list of values."""
         if series is None or series.empty:
             return []
-        return series.tolist()
+        return cast(list, series.tolist())
 
     # ==================
     # Inspection Operations
@@ -160,14 +160,14 @@ DF>
         """Get list of column names."""
         if df is None:
             return []
-        return df.columns.tolist()
+        return cast(list, df.columns.tolist())
 
     @WordDecorator("( df:DataFrame -- dtypes:dict )", "Get column data types as dict {col: dtype}", "DF.DTYPES")
     async def DF_DTYPES(self, df: pd.DataFrame) -> dict:
         """Get column data types as dict."""
         if df is None:
             return {}
-        return df.dtypes.astype(str).to_dict()
+        return cast(dict, df.dtypes.astype(str).to_dict())
 
     @WordDecorator("( df:DataFrame -- stats:DataFrame )", "Get summary statistics", "DF.DESCRIBE")
     async def DF_DESCRIBE(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -181,7 +181,7 @@ DF>
         """Count unique values per column."""
         if df is None:
             return {}
-        return df.nunique().to_dict()
+        return cast(dict, df.nunique().to_dict())
 
     # ==================
     # Column Operations
@@ -272,7 +272,7 @@ DF>
         return df.select_dtypes(include=dtypes)
 
     @ForthicDirectWord("( df:DataFrame column:str forthic:str -- series:Series )", "Apply Forthic to column", "DF.APPLY-COL")
-    async def DF_APPLY_COL(self, interp) -> None:
+    async def DF_APPLY_COL(self, interp: Any) -> None:
         """Apply Forthic code to each value in a column.
 
         The Forthic code receives each column value on the stack and should
@@ -330,7 +330,7 @@ DF>
             return {}
         if index < 0 or index >= len(df):
             raise IndexError(f"Row index {index} out of range for DataFrame with {len(df)} rows")
-        return df.iloc[index].to_dict()
+        return cast(dict, df.iloc[index].to_dict())
 
     @WordDecorator("( df:DataFrame label:any -- record:dict )", "Get row by label as record", "DF.LOC")
     async def DF_LOC(self, df: pd.DataFrame, label: Any) -> dict:
@@ -339,10 +339,10 @@ DF>
             return {}
         if label not in df.index:
             raise KeyError(f"Label '{label}' not found in DataFrame index")
-        return df.loc[label].to_dict()
+        return cast(dict, df.loc[label].to_dict())
 
     @ForthicDirectWord("( df:DataFrame forthic:str -- df:DataFrame )", "Filter rows with Forthic predicate", "DF.FILTER")
-    async def DF_FILTER(self, interp) -> None:
+    async def DF_FILTER(self, interp: Any) -> None:
         """Filter DataFrame rows using Forthic predicate.
 
         The Forthic code receives each row as a record (dict) on the stack
@@ -991,7 +991,7 @@ DF>
     # ==================
 
     @ForthicDirectWord("( df:DataFrame forthic:str -- df:DataFrame )", "Map Forthic over DataFrame elements", "DF.MAP")
-    async def DF_MAP(self, interp) -> None:
+    async def DF_MAP(self, interp: Any) -> None:
         """Map Forthic code over all elements in DataFrame.
 
         The Forthic code receives each element value on the stack and should
@@ -1022,7 +1022,7 @@ DF>
         "Apply Forthic to rows or columns",
         "DF.APPLY",
     )
-    async def DF_APPLY(self, interp) -> None:
+    async def DF_APPLY(self, interp: Any) -> None:
         """Apply Forthic to rows or columns.
 
         Options:

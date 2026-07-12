@@ -32,11 +32,6 @@ pandas = [
     "pandas>=2.0.0",
     "openpyxl>=3.1.0",  # For Excel support
 ]
-grpc = [
-    "grpcio>=1.60.0",
-    "grpcio-tools>=1.60.0",
-    "pyyaml>=6.0",
-]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -44,8 +39,8 @@ dev = [
     "ruff>=0.1.0",
     "pandas>=2.0.0",  # Include for testing
     "openpyxl>=3.1.0",
-    "grpcio>=1.60.0",
-    "grpcio-tools>=1.60.0",
+    "types-PyYAML",
+    "types-python-dateutil",
 ]
 
 [project.urls]
@@ -54,7 +49,6 @@ Repository = "https://github.com/forthix/forthic-py"
 
 [project.scripts]
 forthic-generate-docs = "scripts.generate_docs:main"
-forthic-py-server = "forthic.grpc.server:main"
 forthic-py-jsonrpc-server = "forthic.jsonrpc.server:main"
 
 [tool.hatch.build.targets.wheel]
@@ -93,6 +87,12 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
 
+[[tool.mypy.overrides]]
+# pandas ships stubs that require a py312 mypy target (PEP 695); the pandas
+# module is py-only host interop, not part of the portable core.
+module = ["pandas"]
+ignore_missing_imports = true
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
@@ -110,6 +110,11 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Interpreter tests deliberately assert that *some* exception is raised;
+# they get specific error types with the Phase 1/2 error-handling work.
+"tests/**" = ["B017"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["forthic"]

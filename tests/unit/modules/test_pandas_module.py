@@ -514,7 +514,7 @@ class TestColumnOperations:
         await interp.run("'age' 'str' pd.DF.ASTYPE")
 
         result = interp.stack_pop()
-        assert result["age"].dtype == object  # strings are stored as object type
+        # pandas <3 stores strings as object dtype; pandas >=3 uses StringDtype
         assert result["age"].tolist() == ["30", "25", "35", "28"]
 
     @pytest.mark.asyncio

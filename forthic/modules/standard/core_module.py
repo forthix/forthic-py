@@ -22,7 +22,7 @@ from ...word_options import WordOptions
 class CoreModule(DecoratedModule):
     """Essential interpreter operations for stack manipulation, variables, and control flow."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("core")
         register_module_doc(
             CoreModule,
@@ -125,6 +125,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
 
     @WordDecorator("( varnames:list -- )", "Creates variables in current module")
     async def VARIABLES(self, varnames: list[str]) -> None:
+        assert self._module.interp is not None
         module = self._module.interp.cur_module()
         for v in varnames:
             if v.startswith("__"):
@@ -137,6 +138,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
 
     @WordDecorator("( value:any variable:any -- )", "Sets variable value (auto-creates if string name)", "!")
     async def bang(self, value: Any, variable: Any) -> None:
+        assert self._module.interp is not None
         if isinstance(variable, str):
             var_obj = CoreModule._get_or_create_variable(self._module.interp, variable)
         else:
@@ -329,6 +331,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
 
         # Replace whitespace-preceded or start-of-string .variable patterns
         def replace_var(match: re.Match) -> str:
+            assert self._module.interp is not None
             var_name = match.group(1)
             variable = CoreModule._get_or_create_variable(self._module.interp, var_name)
             value = variable.get_value()

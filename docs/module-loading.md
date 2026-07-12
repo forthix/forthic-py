@@ -1,6 +1,6 @@
 # Configuration-Based Module Loading
 
-The Forthic Python gRPC server supports loading custom modules via a YAML configuration file, enabling extensibility without code modifications.
+The Forthic Python JSON-RPC server supports loading custom modules via a YAML configuration file, enabling extensibility without code modifications.
 
 ## Quick Start
 
@@ -37,21 +37,21 @@ modules:
 ### 3. Start Server with Configuration
 
 ```bash
-python -m forthic.grpc.server --modules-config modules.yaml
+python -m forthic.jsonrpc.server --modules-config modules.yaml
 ```
 
 Or use the console script if you installed the package:
 
 ```bash
-forthic-py-server --modules-config modules.yaml
+forthic-py-jsonrpc-server --modules-config modules.yaml
 ```
 
 ### 4. Use from TypeScript
 
 ```typescript
-import { GrpcClient } from '@forthix/forthic-ts/grpc';
+import { JsonRpcClient } from '@forthix/forthic-ts/jsonrpc';
 
-const client = new GrpcClient('localhost:50051');
+const client = new JsonRpcClient('localhost:8765');
 
 // Discover available modules
 const modules = await client.listModules();
@@ -73,7 +73,7 @@ console.log(result2); // ['HELLO']
 
 ```yaml
 modules:
-  - name: <module-name>           # Name exposed via gRPC (required)
+  - name: <module-name>           # Name exposed over JSON-RPC (required)
     import_path: <module:Class>   # Python import path (required)
     optional: <true|false>         # Fail server if can't load? (default: false)
     description: <description>     # Human-readable description (optional)
@@ -81,7 +81,7 @@ modules:
 
 ### Fields
 
-- **name**: Module name as exposed via gRPC. Used when calling `USE-PY-MODULES` from Forthic code.
+- **name**: Module name as exposed over JSON-RPC. Used when calling `USE-PY-MODULES` from Forthic code.
 - **import_path**: Python import path in format `"module.path:ClassName"`. The module must be importable from the server's Python path.
 - **optional**: If `true`, module loading failure won't stop server startup. If `false` (default), server will exit if the module cannot be loaded.
 - **description**: Human-readable description for documentation purposes.
@@ -92,7 +92,7 @@ You can specify the modules configuration via environment variable:
 
 ```bash
 export FORTHIC_MODULES_CONFIG=/etc/forthic/modules.yaml
-python -m forthic.grpc.server
+python -m forthic.jsonrpc.server
 
 # Config file location precedence:
 # 1. --modules-config command line argument
@@ -127,13 +127,13 @@ This approach keeps your custom modules separate from the Forthic installation:
 
 ```bash
 # Install Forthic
-pip install forthic[grpc]
+pip install forthic-py
 
 # Install your custom modules package
 pip install my-company-forthic-modules
 
 # Configuration managed separately
-python -m forthic.grpc.server --modules-config /etc/forthic/modules.yaml
+python -m forthic.jsonrpc.server --modules-config /etc/forthic/modules.yaml
 ```
 
 **Directory structure:**
@@ -167,7 +167,7 @@ Create a custom server that pre-configures module loading:
 
 ```python
 # my_company_server/server.py
-from forthic.grpc.server import serve
+from forthic.jsonrpc.server import serve
 import os
 
 def main():
@@ -175,7 +175,7 @@ def main():
         'COMPANY_MODULES_CONFIG',
         '/etc/company/forthic-modules.yaml'
     )
-    serve(port=50051, modules_config=config_path)
+    serve(port=8765, modules_config=config_path)
 
 if __name__ == "__main__":
     main()
@@ -201,16 +201,16 @@ company-forthic-server
 FROM python:3.10
 
 # Install Forthic
-RUN pip install forthic[grpc]
+RUN pip install forthic-py
 
 # Install custom modules
 COPY ./my_modules /app/my_modules
 COPY ./modules.yaml /app/modules.yaml
 
 WORKDIR /app
-EXPOSE 50051
+EXPOSE 8765
 
-CMD ["python", "-m", "forthic.grpc.server", "--modules-config", "modules.yaml"]
+CMD ["python", "-m", "forthic.jsonrpc.server", "--modules-config", "modules.yaml"]
 ```
 
 ## Creating Custom Modules
@@ -317,12 +317,12 @@ class DataModule(DecoratedModule):
 ## Server Command Line Options
 
 ```bash
-python -m forthic.grpc.server [OPTIONS]
+python -m forthic.jsonrpc.server [OPTIONS]
 
 Options:
-  --port PORT                  Port to listen on (default: 50051)
+  --port PORT                  Port to listen on (default: 8765)
   --modules-config PATH        Path to modules configuration YAML file
-  --host HOST                  Host to bind to (default: [::] for all interfaces)
+  --host HOST                  Host to bind to (default: 0.0.0.0, all interfaces)
   -h, --help                   Show help message
 
 Environment Variables:
@@ -333,20 +333,20 @@ Environment Variables:
 
 ```bash
 # Start with default modules (pandas if available)
-python -m forthic.grpc.server
+python -m forthic.jsonrpc.server
 
 # Start with custom module configuration
-python -m forthic.grpc.server --modules-config /path/to/modules.yaml
+python -m forthic.jsonrpc.server --modules-config /path/to/modules.yaml
 
 # Start on custom port
-python -m forthic.grpc.server --port 50052
+python -m forthic.jsonrpc.server --port 8766
 
 # Combine options
-python -m forthic.grpc.server --port 50052 --modules-config modules.yaml
+python -m forthic.jsonrpc.server --port 8766 --modules-config modules.yaml
 
 # Use environment variable
 export FORTHIC_MODULES_CONFIG=/etc/forthic/modules.yaml
-python -m forthic.grpc.server
+python -m forthic.jsonrpc.server
 ```
 
 ## Module Discovery from TypeScript
@@ -354,9 +354,9 @@ python -m forthic.grpc.server
 Once modules are loaded on the Python server, TypeScript can discover and use them:
 
 ```typescript
-import { GrpcClient } from '@forthix/forthic-ts/grpc';
+import { JsonRpcClient } from '@forthix/forthic-ts/jsonrpc';
 
-const client = new GrpcClient('localhost:50051');
+const client = new JsonRpcClient('localhost:8765');
 
 // List all available modules
 const modules = await client.listModules();
@@ -391,7 +391,7 @@ console.log(result); // [15]
 **Solutions:**
 1. Check server startup logs for errors:
    ```bash
-   python -u -m forthic.grpc.server --modules-config modules.yaml
+   python -u -m forthic.jsonrpc.server --modules-config modules.yaml
    ```
 
 2. Verify import path is correct:
@@ -453,8 +453,5 @@ modules:
 
 ## See Also
 
-- [Creating Custom Modules Guide](./custom-modules.md)
 - [Example Module](../examples/dynamic_module_example.py)
 - [Configuration Examples](../examples/example_modules_config.yaml)
-- [Integration Tests](../../forthic/integration-tests/test_phase10.5.ts)
-- [gRPC Multi-Runtime Architecture](../../GRPC_MULTIRUNTIME_PLAN.md)

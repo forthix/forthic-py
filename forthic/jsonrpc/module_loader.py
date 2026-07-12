@@ -1,10 +1,11 @@
 """
-Module loader for Forthic gRPC server
+Module loader for the Forthic JSON-RPC server
 Loads modules from configuration file
 """
 import importlib
-from typing import Dict, Any
 from pathlib import Path
+from typing import Any
+
 import yaml
 
 
@@ -13,7 +14,7 @@ class ModuleLoadError(Exception):
     pass
 
 
-def load_modules_from_config(config_path: str | Path) -> Dict[str, Any]:
+def load_modules_from_config(config_path: str | Path) -> dict[str, Any]:
     """
     Load Forthic modules from YAML configuration file.
 
@@ -32,7 +33,7 @@ def load_modules_from_config(config_path: str | Path) -> Dict[str, Any]:
     if not config_path.exists():
         raise FileNotFoundError(f"Module config file not found: {config_path}")
 
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     if not config or 'modules' not in config:
@@ -87,7 +88,7 @@ def load_modules_from_config(config_path: str | Path) -> Dict[str, Any]:
     return loaded_modules
 
 
-def load_modules_from_directory(plugin_dir: str | Path) -> Dict[str, Any]:
+def load_modules_from_directory(plugin_dir: str | Path) -> dict[str, Any]:
     """
     Auto-discover and load modules from a plugin directory.
 

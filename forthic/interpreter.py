@@ -6,7 +6,6 @@ Core interpreter that tokenizes and executes Forthic code.
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from datetime import timezone as dt_timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -634,14 +633,3 @@ class StandardInterpreter(Interpreter):
         # This ensures they're checked LAST during find_word()
         for module in stdlib:
             self.import_module(module._module, "")
-
-        # Auto-register RemoteRuntimeModule for gRPC multi-runtime support
-        # This is optional - only loaded if grpc dependencies are available
-        try:
-            from .grpc.remote_runtime_module import RemoteRuntimeModule
-
-            remote_runtime_module = RemoteRuntimeModule()
-            self.import_module(remote_runtime_module, "")
-        except ImportError:
-            # grpc dependencies not available - skip remote runtime support
-            pass

@@ -19,7 +19,7 @@ from ...decorators import ForthicWord as WordDecorator
 class StringModule(DecoratedModule):
     """String manipulation and processing operations with regex and URL encoding support."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("string")
         register_module_doc(
             StringModule,

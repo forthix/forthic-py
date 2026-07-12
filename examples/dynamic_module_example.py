@@ -10,7 +10,7 @@ Usage:
     3. Use the module from TypeScript via USE-PY-MODULES
 """
 
-from forthic.decorators import DecoratedModule, ForthicWord, ForthicDirectWord
+from forthic.decorators import DecoratedModule, ForthicDirectWord, ForthicWord
 
 
 class ExampleModule(DecoratedModule):

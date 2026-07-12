@@ -244,54 +244,35 @@ python -m scripts.generate_docs
 
 ---
 
-## Multi-Runtime Execution
+## JSON-RPC Transport
 
-Call code from other language runtimes seamlessly - use TypeScript's JavaScript libraries from Python, or Ruby's Rails from Python.
+Expose Python-specific modules to other Forthic runtimes over JSON-RPC 2.0 (HTTP POST `/rpc`). The wire format matches the TypeScript and Rust JSON-RPC servers, so the runtimes are interoperable.
 
-### Quick Example
+### Start the server
 
-```python
-from forthic import Interpreter
-from forthic.grpc.client import GrpcClient
-from forthic.grpc.remote_runtime_module import RemoteRuntimeModule
+```bash
+# Default port 8765
+python -m forthic.jsonrpc.server
 
-async def main():
-    interp = Interpreter()
-
-    # Register the remote runtime module
-    remote_runtime = RemoteRuntimeModule()
-    interp.register_module(remote_runtime)
-
-    await interp.run("""
-        # Connect to TypeScript runtime
-        "localhost:50052" CONNECT-RUNTIME
-
-        # Load TypeScript modules
-        ["mytsmodule"] USE-TS-MODULES
-
-        # Now use TypeScript code from Python!
-        SOME-DATA TS-FUNCTION-CALL
-    """)
-
-asyncio.run(main())
+# With custom modules loaded from a YAML config
+python -m forthic.jsonrpc.server --modules-config examples/example_modules_config.yaml
 ```
 
-### Approaches
+### Call it from Python
 
-- **gRPC** - Python ↔ TypeScript ↔ Ruby (fast, server-to-server)
-- **WebSocket** - Browser ↔ Python (client-server)
+```python
+from forthic.jsonrpc import JsonRpcClient
+
+async def main():
+    client = JsonRpcClient("localhost:8765")
+    result = await client.execute_word("MULTIPLY", [5, 3])
+    print(result)  # [15]
+```
 
 ### Learn More
 
-📖 **[Complete Multi-Runtime Documentation](docs/multi-runtime/)**
-
-- **[Overview](docs/multi-runtime/)** - When and how to use multi-runtime
-- **[gRPC Setup](docs/multi-runtime/grpc.md)** - Server and client configuration
-- **[WebSocket Setup](docs/multi-runtime/websocket.md)** - Browser-compatible communication
-- **[Configuration](docs/multi-runtime/configuration.md)** - YAML config and connection management
+- **[Module Loading](docs/module-loading.md)** - YAML config for serving custom modules
 - **[Examples](examples/)** - Working code samples
-
-**Runtime Status:** ✅ TypeScript, Python, Ruby | 🚧 Rust | 📋 Java, .NET
 
 ---
 
@@ -304,8 +285,7 @@ forthic-py/
 │   ├── modules/          # Standard library modules
 │   │   ├── standard/     # Standard modules (array, string, math, etc.)
 │   │   └── pandas/       # Python-specific pandas integration
-│   ├── grpc/             # gRPC client/server for multi-runtime
-│   ├── websocket/        # WebSocket support
+│   ├── jsonrpc/          # JSON-RPC 2.0 client/server transport
 │   ├── interpreter.py    # Main interpreter implementation
 │   ├── module.py         # Module and word classes
 │   ├── tokenizer.py      # Lexical analysis
@@ -315,9 +295,7 @@ forthic-py/
 │   └── integration/      # Integration tests
 ├── scripts/              # Utility scripts
 │   └── generate_docs.py  # Documentation generator
-├── protos/               # Protocol buffer definitions
-│   └── v1/               # Version 1 of gRPC protocol
-└── docs/                 # Generated documentation (created by generate_docs.py)
+└── docs/                 # Documentation
 ```
 
 ---

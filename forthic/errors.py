@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class CodeLocationData:
+class CodeLocation:
     """Information about a location in Forthic source code."""
 
     source: str | None = None  # Source of the code (module name, file path)
@@ -21,7 +21,7 @@ class ForthicError(Exception):
         self,
         forthic: str,
         note: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         super().__init__(note)
@@ -44,7 +44,7 @@ class UnknownWordError(ForthicError):
         self,
         forthic: str,
         word: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         note = f"Unknown word: {word}"
@@ -62,8 +62,8 @@ class WordExecutionError(ForthicError):
         self,
         message: str,
         error: Exception,
-        call_location: CodeLocationData | None = None,
-        definition_location: CodeLocationData | None = None,
+        call_location: CodeLocation | None = None,
+        definition_location: CodeLocation | None = None,
     ):
         super().__init__("", message, call_location)
         self.inner_error = error
@@ -72,7 +72,7 @@ class WordExecutionError(ForthicError):
     def get_error(self) -> Exception:
         return self.inner_error
 
-    def get_definition_location(self) -> CodeLocationData | None:
+    def get_definition_location(self) -> CodeLocation | None:
         return self.definition_location
 
 
@@ -82,7 +82,7 @@ class MissingSemicolonError(ForthicError):
     def __init__(
         self,
         forthic: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         super().__init__(forthic, "Missing semicolon", location, cause)
@@ -94,7 +94,7 @@ class ExtraSemicolonError(ForthicError):
     def __init__(
         self,
         forthic: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         super().__init__(forthic, "Extra semicolon", location, cause)
@@ -106,7 +106,7 @@ class StackUnderflowError(ForthicError):
     def __init__(
         self,
         forthic: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         super().__init__(forthic, "Stack underflow", location, cause)
@@ -119,7 +119,7 @@ class InvalidVariableNameError(ForthicError):
         self,
         forthic: str,
         varname: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         note = f"Invalid variable name: {varname}"
@@ -137,7 +137,7 @@ class UnknownModuleError(ForthicError):
         self,
         forthic: str,
         module_name: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         note = f"Unknown module: {module_name}"
@@ -154,7 +154,7 @@ class InvalidInputPositionError(ForthicError):
     def __init__(
         self,
         forthic: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         super().__init__(forthic, "Invalid input position", location, cause)
@@ -166,7 +166,7 @@ class InvalidWordNameError(ForthicError):
     def __init__(
         self,
         forthic: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         note: str | None = None,
         cause: Exception | None = None,
     ):
@@ -180,7 +180,7 @@ class UnterminatedStringError(ForthicError):
     def __init__(
         self,
         forthic: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         super().__init__(forthic, "Unterminated string", location, cause)
@@ -193,7 +193,7 @@ class UnknownTokenError(ForthicError):
         self,
         forthic: str,
         token: str,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         note = f"Unknown type of token: {token}"
@@ -212,7 +212,7 @@ class ModuleError(ForthicError):
         forthic: str,
         module_name: str,
         error: Exception,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         note = f"Error in module {module_name}: {error}"
@@ -235,7 +235,7 @@ class TooManyAttemptsError(ForthicError):
         forthic: str,
         num_attempts: int,
         max_attempts: int,
-        location: CodeLocationData | None = None,
+        location: CodeLocation | None = None,
         cause: Exception | None = None,
     ):
         note = f"Too many recovery attempts: {num_attempts} of {max_attempts}"

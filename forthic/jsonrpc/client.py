@@ -1,12 +1,11 @@
 """JSON-RPC 2.0 client for Forthic.
 
-Speaks the same async surface as forthic.grpc.client.GrpcClient
-(execute_word / execute_sequence / list_modules / get_module_info) so it
-can be used interchangeably by RemoteWord / RemoteModule / RuntimeManager.
+Async surface: execute_word / execute_sequence / list_modules /
+get_module_info.
 
 Uses urllib.request from the standard library — no extra dependencies. The
-synchronous HTTP call is wrapped in asyncio.to_thread so the public API
-matches the async gRPC client.
+synchronous HTTP call is wrapped in asyncio.to_thread to provide an async
+public API.
 """
 
 from __future__ import annotations
