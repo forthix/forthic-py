@@ -5,7 +5,7 @@ Port of forthic-rs tests/tier2_record_semantics_test.rs (the post-scrub ts
 #31/#33 behavior). Records iterate, index, slice, and serialize in
 INSERTION order — every sorted() on record keys was a bug.
 
-Deferred to their word batches: TAKE-LAST (Batch 2) and DELETE (Batch 3).
+Deferred to its word batch: DELETE (Batch 3).
 The DROP -> SKIP rename (Batch 0) has landed — the SKIP tests here use SKIP.
 """
 
@@ -46,9 +46,9 @@ async def test_keys_and_values_follow_insertion_order():
 @pytest.mark.asyncio
 async def test_nth_first_last_use_insertion_order():
     # Sorted-key order would give a=2 first and z=1 last; insertion order
-    # gives z=1 first and m=3 last. (FIRST lands in Batch 2 — add
-    # `ZAM FIRST == 1` here when it does.)
+    # gives z=1 first and m=3 last
     assert await run(f"{ZAM} 0 NTH") == 1
+    assert await run(f"{ZAM} FIRST") == 1
     assert await run(f"{ZAM} LAST") == 3
     assert await run(f"{ZAM} 1 NTH") == 2
 
@@ -98,6 +98,14 @@ async def test_skip_on_record():
     # n <= 0 skips nothing
     unchanged = await run(f"{ZAM} 0 SKIP")
     assert list(unchanged.keys()) == ["z", "a", "m"]
+
+
+@pytest.mark.asyncio
+async def test_take_last():
+    assert await run("[ 1 2 3 4 ] 2 TAKE-LAST") == [3, 4]
+    tail = await run(f"{ZAM} 2 TAKE-LAST")
+    assert list(tail.keys()) == ["a", "m"]
+    assert await run("[ 1 2 ] 0 TAKE-LAST") == []
 
 
 # ===== SLICE on records + span guard =====

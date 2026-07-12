@@ -169,6 +169,13 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
     (haystack-first, values_equal; classic IN dropped), ANY?/ALL?,
     OR/AND strictly two-operand. Spec:
     tests/unit/core/test_word_batch1.py.
+  - **Batch 2 DONE (2026-07-12, feat/word-batch2).** FILTER (SELECT
+    dropped), FIND, COUNT, SORT-BY, MIN-BY/MAX-BY, UNIQUE-BY, SORT-U,
+    NUMBERED, FIRST, TAKE-LAST, MAP-AT, TIMES-RUN (<REPEAT dropped);
+    group keys now coerce like JS object keys (value_to_key_string);
+    GROUP-BY-FIELD NULL-record error + missing-field "null" buckets;
+    BY-FIELD falsy-skip; GROUPS-OF fractional truncation. Spec:
+    tests/unit/core/test_word_batch2.py.
 - **Phase 4 — Interpolation redesign.** `${name}` contract into core;
   delete the bare-dot grammar (and `{.var}@` if present); PRINT shares.
   Port ts PR #41 / rs PR #15 directly.

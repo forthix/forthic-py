@@ -427,11 +427,11 @@ class TestMapAndIteration:
         assert sum_val == 15
 
     @pytest.mark.asyncio
-    async def test_select(self) -> None:
-        """Test SELECT operation."""
+    async def test_filter(self) -> None:
+        """Test FILTER operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            [0 1 2 3 4 5 6] "2 MOD 1 ==" SELECT
+            [0 1 2 3 4 5 6] "2 MOD 1 ==" FILTER
         """)
         stack = interp.get_stack()
         assert stack[0] == [1, 3, 5]
@@ -845,7 +845,8 @@ class TestGroupingAndRelabeling:
         interp.stack_push(make_records())
         await interp.run("'key' BY-FIELD")
         grouped = interp.stack_pop()
-        assert grouped[104]["status"] == "IN PROGRESS"
+        # Keys coerce like JS object keys: strings in every runtime
+        assert grouped["104"]["status"] == "IN PROGRESS"
 
     @pytest.mark.asyncio
     async def test_by_field_with_nulls(self) -> None:
@@ -867,7 +868,8 @@ class TestGroupingAndRelabeling:
         interp.stack_push(records)
         await interp.run("'key' BY-FIELD")
         grouped = interp.stack_pop()
-        assert grouped[104]["status"] == "IN PROGRESS"
+        # Falsy records skipped; keys coerce like JS object keys
+        assert grouped["104"]["status"] == "IN PROGRESS"
 
     @pytest.mark.asyncio
     async def test_group_by_field_array(self) -> None:
@@ -1274,22 +1276,22 @@ class TestAdvancedArrayOperations:
         assert sorted(stack[0].values()) == [1, 2, 3, 10, 40]
 
     @pytest.mark.asyncio
-    async def test_select_record(self) -> None:
-        """Test SELECT on records."""
+    async def test_filter_record(self) -> None:
+        """Test FILTER on records."""
         interp = StandardInterpreter()
         await interp.run("""
-            [['a' 1] ['b' 2] ['c' 3]] REC  "2 MOD 0 ==" SELECT
+            [['a' 1] ['b' 2] ['c' 3]] REC  "2 MOD 0 ==" FILTER
         """)
         stack = interp.get_stack()
         assert list(stack[0].keys()) == ["b"]
         assert list(stack[0].values()) == [2]
 
     @pytest.mark.asyncio
-    async def test_select_with_key(self) -> None:
-        """Test SELECT with key option."""
+    async def test_filter_with_key(self) -> None:
+        """Test FILTER with key option."""
         interp = StandardInterpreter()
         await interp.run("""
-            [0 1 2 3 4 5 6] "+ 3 MOD 1 ==" [.with_key TRUE] ~> SELECT
+            [0 1 2 3 4 5 6] "+ 3 MOD 1 ==" [.with_key TRUE] ~> FILTER
         """)
         stack = interp.get_stack()
         assert stack[0] == [2, 5]
@@ -1601,11 +1603,11 @@ class TestSpecialAndMiscOperations:
         assert stack[2] == "Howdy, Everyone!"
 
     @pytest.mark.asyncio
-    async def test_repeat(self) -> None:
-        """Test <REPEAT operation."""
+    async def test_times_run(self) -> None:
+        """TIMES-RUN replaces <REPEAT (no automatic value passing)."""
         interp = StandardInterpreter()
         await interp.run("""
-            [0 "1 +" 6 <REPEAT]
+            [0 6 "DUP 1 +" TIMES-RUN]
         """)
         stack = interp.get_stack()
         assert stack[0] == [0, 1, 2, 3, 4, 5, 6]
@@ -1892,7 +1894,7 @@ class TestProfiling:
         interp = StandardInterpreter()
         await interp.run("""
             PROFILE-START
-            [1 "1 +" 6 <REPEAT]
+            [1 6 "DUP 1 +" TIMES-RUN]
             PROFILE-END DROP
             PROFILE-DATA
         """)
