@@ -201,10 +201,29 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
   `${name}` contract in core; bare-dot grammar deleted (py never had
   `{.var}@`); PRINT shares the machinery; READ-ONLY lookup via the new
   Interpreter.find_variable.
-- **Phase 5 — Verify pass.** The py edition of present-but-verify: @
-  read-only, OR/AND arity, MEAN dispatch, datetime specifics (#35 rule),
-  TAKE/SLICE bounds — plus anything Phase 0 flags as
-  present-but-unverified.
+- **Phase 5 — Verify pass. DONE (2026-07-12, fix/present-but-verify).**
+  @ is READ-ONLY (unknown string name → new UnknownVariableError, miss
+  creates nothing; ! and !@ keep get-or-create). MEAN got the two
+  contract fixes (is_truthy input check — empty records now pass through
+  as-is; first-seen key order for field-wise means). >DATETIME breadth
+  verified + one fix: trailing-Z/offset strings are INSTANTS resolved
+  into the interpreter tz (astimezone; consistent with >DATE #35).
+  Originally a sanctioned divergence from ts; the owner opted to fix ts
+  instead — forthic-ts fix/datetime-zoned-strings-are-instants aligns
+  all three runtimes (divergence retired once it merges). Plus an
+  explicit Date→midnight arm.
+  AT / >TIMESTAMP / TIMESTAMP>DATETIME verified matching. OR/AND arity
+  verified (Batch 1; py keeps ts's raw-operand return — rs's Bool
+  coercion is rs-only). Stray `}` now raises ModuleStackUnderflowError
+  (it used to silently pop the app module). UNIQUE deduping is
+  structural (compact-JSON keys; dict.fromkeys crashed on records).
+  >INT/>FLOAT left as-is: py's 0-fallback is stricter than ts's
+  parseFloat leniency — documented, consistent with the strict-parsing
+  decision. Owner decisions landed: E/PI KEPT as documented py
+  extensions (pending upstreaming); the 7 no-sibling classic groups
+  DROPPED to match rs (EXPORT, PROFILE-*, SHUFFLE, ROTATE, INFINITY,
+  UNIFORM-RANDOM, RE-MATCH-GROUP — 10 words, tombstone-tested). Spec:
+  tests/unit/core/test_present_verify.py.
 - **Phase 6 — Wire + capstone.** Cross-runtime smoke (py server driven by
   the ts client, like rs's `make smoke-ts`; ideally also py↔rs);
   docstring coverage sweep to match the 177-word documented surface

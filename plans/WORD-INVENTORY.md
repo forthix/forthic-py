@@ -140,21 +140,18 @@ INVERT-KEYS (record_module.py:157, rename from INVERT_KEYS), DATE>INT
 (string_module.py:97), URL-ENCODE (string_module.py:187, rename),
 URL-DECODE (string_module.py:194, rename).
 
-**No settled disposition — py-specific, flag for owner (10):** rs never had
-these, so the rs scrub never decided them. All are ts-classic with no
-canonical sibling; by the same "dropping removes functionality with no
-replacement" rationale the default is KEEP, but confirm:
-EXPORT (core_module.py:181 — module infrastructure; ts serves it via
-classic), PROFILE-START/END/TIMESTAMP/DATA (core_module.py:253-285 —
-runtime tooling; py has real profiling support behind them), SHUFFLE
-(array_module.py:661), ROTATE (array_module.py:334), INFINITY
-(math_module.py:313), UNIFORM-RANDOM (math_module.py:317), RE-MATCH-GROUP
-(string_module.py:176, rename from RE_MATCH_GROUP).
+**No-sibling classics — DECIDED (owner, 2026-07-12): DROP ALL, matching
+rs exactly.** EXPORT, PROFILE-START/END/TIMESTAMP/DATA, SHUFFLE, ROTATE,
+INFINITY, UNIFORM-RANDOM, RE-MATCH-GROUP — all 10 words removed in
+Phase 5 with tombstone tests. (Host modules can still mark words
+exportable via the module API; the interpreter's profiling
+infrastructure remains for host use — only the Forthic-level words are
+gone.)
 
-**py-only words with NO ts counterpart at all (not even classic):**
-E (math_module.py:393) and PI (math_module.py:389). Not in rs either.
-Owner decision: drop for parity, or propose upstream to ts. Until decided,
-exclude from the portable-core count.
+**py-only E and PI — DECIDED (owner, 2026-07-12): KEEP, propose
+upstream to ts/rs.** Documented as py extensions in their word
+descriptions; portable programs shouldn't rely on them until ts adopts
+them. Excluded from the portable-core count.
 
 ## Never port
 

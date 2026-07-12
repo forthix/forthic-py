@@ -408,38 +408,12 @@ class TestDebug:
 
 
 class TestProfiling:
-    """Test profiling operations."""
+    """PROFILE-* words are dropped (owner decision — matches rs)."""
 
     @pytest.mark.asyncio
-    async def test_profiling_basic(self) -> None:
-        """Test basic profiling workflow."""
-        interp = StandardInterpreter()
+    async def test_profile_words_are_gone(self) -> None:
+        for word in ["PROFILE-START", "PROFILE-TIMESTAMP", "PROFILE-END", "PROFILE-DATA"]:
+            interp = StandardInterpreter()
+            with pytest.raises(Exception, match="PROFILE"):
+                await interp.run(word)
 
-        await interp.run("PROFILE-START")
-        await interp.run("1 2 + 3 4 +")
-        await interp.run("PROFILE-END")
-        await interp.run("PROFILE-DATA")
-
-        result = interp.stack_pop()
-        assert "word_counts" in result
-        assert "timestamps" in result
-        assert len(result["word_counts"]) > 0
-
-    @pytest.mark.asyncio
-    async def test_profiling_timestamps(self) -> None:
-        """Test profiling with timestamps."""
-        interp = StandardInterpreter()
-
-        await interp.run("PROFILE-START")
-        await interp.run('\"start\" PROFILE-TIMESTAMP')
-        await interp.run("1 2 +")
-        await interp.run('\"end\" PROFILE-TIMESTAMP')
-        await interp.run("PROFILE-DATA")
-
-        result = interp.stack_pop()
-        timestamps = result["timestamps"]
-        assert len(timestamps) == 2
-        assert timestamps[0]["label"] == "start"
-        assert timestamps[1]["label"] == "end"
-        assert "delta" in timestamps[0]
-        assert "time_ms" in timestamps[0]

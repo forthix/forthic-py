@@ -250,6 +250,36 @@ class TooManyAttemptsError(ForthicError):
         return self.max_attempts
 
 
+class UnknownVariableError(ForthicError):
+    """Raised when @ fetches a variable that was never declared or stored."""
+
+    def __init__(
+        self,
+        forthic: str,
+        varname: str,
+        location: CodeLocation | None = None,
+        cause: Exception | None = None,
+    ):
+        note = f"Unknown variable: {varname}"
+        super().__init__(forthic, note, location, cause)
+        self.varname = varname
+
+    def get_varname(self) -> str:
+        return self.varname
+
+
+class ModuleStackUnderflowError(ForthicError):
+    """Raised by an unmatched '}' at the app-module level."""
+
+    def __init__(
+        self,
+        forthic: str,
+        location: CodeLocation | None = None,
+        cause: Exception | None = None,
+    ):
+        super().__init__(forthic, "Unmatched '}' (module stack underflow)", location, cause)
+
+
 class IntentionalStopError(Exception):
     """Raised to intentionally stop execution."""
 

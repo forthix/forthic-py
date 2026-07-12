@@ -119,10 +119,10 @@ class TestStringModule:
         assert interp.stack_pop() == ["1", "2", "3"]
 
     @pytest.mark.asyncio
-    async def test_re_match_group(self, interp):
-        """Test RE-MATCH-GROUP."""
-        await interp.run("'test123' 'test([0-9]+)' RE-MATCH 1 RE-MATCH-GROUP")
-        assert interp.stack_pop() == "123"
+    async def test_re_match_group_is_gone(self, interp):
+        """Tombstone: RE-MATCH-GROUP dropped — RE-MATCH returns [full, g1, ...] directly."""
+        with pytest.raises(Exception, match="RE-MATCH-GROUP"):
+            await interp.run("'ab' '(a)' RE-MATCH 1 RE-MATCH-GROUP")
 
     @pytest.mark.asyncio
     async def test_url_encode(self, interp):

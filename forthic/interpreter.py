@@ -13,6 +13,7 @@ from .errors import (
     ExtraSemicolonError,
     MissingSemicolonError,
     ModuleError,
+    ModuleStackUnderflowError,
     StackUnderflowError,
     TooManyAttemptsError,
     UnknownModuleError,
@@ -78,6 +79,12 @@ class EndModuleWord(Word):
         super().__init__("}")
 
     async def execute(self, interp: Interpreter) -> None:
+        # A stray } at the app-module level used to silently pop the app
+        # module itself, corrupting the interpreter
+        if interp.module_stack_depth() <= 1:
+            raise ModuleStackUnderflowError(
+                interp.get_top_input_string(), interp.get_string_location()
+            )
         interp.module_stack_pop()
 
 
