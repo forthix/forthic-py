@@ -190,6 +190,13 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
     interpolation redesign: names-only holes, read-only
     find_variable lookup, \${ escapes, null_text default "",
     bare-dot grammar deleted. Spec: tests/unit/core/test_word_batch4.py.
+  - **Batch 5 DONE (2026-07-12, feat/word-batch5) — Phase 3 complete.**
+    RANGE, FORMAT-FIXED (>FIXED dropped), SQRT NaN, CLAMP NaN, MOD/ROUND
+    pinned to JS semantics, PRODUCT strictness, AM/PM DateTime arm,
+    DAYS-BETWEEN (SUBTRACT-DATES dropped — last classic drop),
+    YEAR/MONTH/DAY-OF-WEEK, >DATE #35 rewrite (strict; Z-instants in
+    interpreter tz), USE-MODULES options. Spec:
+    tests/unit/core/test_word_batch5.py.
 - **Phase 4 — Interpolation redesign. DONE (2026-07-12, with Batch 4).**
   `${name}` contract in core; bare-dot grammar deleted (py never had
   `{.var}@`); PRINT shares the machinery; READ-ONLY lookup via the new

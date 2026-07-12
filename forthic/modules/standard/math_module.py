@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
+from .array_module import MAX_MATERIALIZED_ELEMENTS
 
 
 class MathModule(DecoratedModule):
@@ -75,11 +76,16 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             return None
         return a / b
 
-    @WordDecorator("( m:number n:number -- remainder:number )", "Modulo operation (m % n)")
+    @WordDecorator("( m:number n:number -- remainder:number )", "Modulo operation (m % n, JS semantics: result takes the sign of m)")
     async def MOD(self, m: float | int | None, n: float | int | None) -> float | int | None:
         if m is None or n is None:
             return None
-        return m % n
+        # JS % is truncated modulo (sign of the dividend); Python's % is
+        # floored (sign of the divisor) — convert
+        result = m % n
+        if result != 0 and (result < 0) != (m < 0):
+            result -= n
+        return result
 
     # ==================
     # Aggregates
@@ -156,6 +162,23 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         return 0
 
     @WordDecorator(
+        "( start:number end:number -- numbers:number[] )",
+        "Generate inclusive integer range from start to end (e.g. 1 5 RANGE -> [1,2,3,4,5]). Empty if start > end.",
+    )
+    async def RANGE(self, start: Any, end: Any) -> list:
+        if start is None or end is None:
+            return []
+        start = int(start)
+        end = int(end)
+        # Guard against a pathological size before allocating. end < start
+        # yields an empty range and needs no bound.
+        if end >= start and end - start + 1 > MAX_MATERIALIZED_ELEMENTS:
+            raise ValueError(
+                f"RANGE size {end - start + 1} is too large (limit {MAX_MATERIALIZED_ELEMENTS})"
+            )
+        return list(range(start, end + 1))
+
+    @WordDecorator(
         "( numbers:number[] -- max:number )",
         "Maximum of an array of numbers. Null elements are skipped. Returns null for empty/all-null array.",
         "MAX",
@@ -197,7 +220,10 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             return None
         result: Any = 1
         for num in numbers:
-            if num is None:
+            # Null or non-numeric elements null the whole result (deliberate
+            # asymmetry with SUM's null-skipping; and no JS string coercion
+            # or Python string repetition)
+            if num is None or isinstance(num, bool) or not isinstance(num, (int, float)):
                 return None
             result *= num
         return result
@@ -242,19 +268,35 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         except (ValueError, TypeError):
             return 0.0
 
-    @WordDecorator("( num:number digits:number -- result:string )", "Format number with fixed decimal places", ">FIXED")
-    async def to_FIXED(self, num: float | int | None, digits: int) -> str | None:
+    @WordDecorator(
+        "( num:number digits:number -- result:string )",
+        "Format number with fixed decimal places (JS toFixed: ties round half away from zero; digits must be 0..100)",
+        "FORMAT-FIXED",
+    )
+    async def FORMAT_FIXED(self, num: Any, digits: Any) -> str | None:
         if num is None:
             return None
+        if isinstance(num, bool) or not isinstance(num, (int, float)):
+            raise ValueError(f"FORMAT-FIXED requires a number, got {num!r}")
+        d = 0 if digits is None else int(digits)
+        if d < 0 or d > 100:
+            raise ValueError(f"FORMAT-FIXED digits must be between 0 and 100, got {digits!r}")
+        # JS toFixed rounds the BINARY double half away from zero: Decimal
+        # of the float is its exact binary value, so 1.005 (really
+        # 1.00499...) gives "1.00" while an exact 0.5 gives "1". Python's
+        # f-string would use ties-to-even ("0").
+        from decimal import ROUND_HALF_UP, Decimal
 
-        return f"{num:.{digits}f}"
+        quantum = Decimal(1).scaleb(-d)
+        return str(Decimal(num).quantize(quantum, rounding=ROUND_HALF_UP))
 
-    @WordDecorator("( num:number -- int:number )", "Round to nearest integer")
+    @WordDecorator("( num:number -- int:number )", "Round to nearest integer (JS Math.round: halves round toward +Infinity)")
     async def ROUND(self, num: float | int | None) -> int | None:
         if num is None:
             return None
-
-        return round(num)
+        # JS Math.round: floor(x + 0.5) — 0.5 -> 1, 2.5 -> 3, -2.5 -> -2.
+        # Python's round() is banker's rounding (2.5 -> 2)
+        return math.floor(num + 0.5)
 
     # ==================
     # Special Values
@@ -286,6 +328,9 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
     async def SQRT(self, n: float | int | None) -> float | None:
         if n is None:
             return None
+        # Negative input is NaN (JS Math.sqrt), not an error
+        if n < 0:
+            return math.nan
         return math.sqrt(n)
 
     @WordDecorator("( n:number -- floor:number )", "Round down to integer")
@@ -309,6 +354,10 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         value = interp.stack_pop()
         if value is None or min_val is None or max_val is None:
             interp.stack_push(None)
+        elif any(isinstance(v, float) and math.isnan(v) for v in (value, min_val, max_val)):
+            # JS Math.min/max propagate NaN; Python's min/max are
+            # order-dependent with NaN — pin the JS behavior
+            interp.stack_push(math.nan)
         else:
             interp.stack_push(max(min_val, min(max_val, value)))
 

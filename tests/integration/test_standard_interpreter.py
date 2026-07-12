@@ -1613,11 +1613,11 @@ class TestSpecialAndMiscOperations:
         assert stack[0] == [0, 1, 2, 3, 4, 5, 6]
 
     @pytest.mark.asyncio
-    async def test_to_fixed(self) -> None:
-        """Test >FIXED converter."""
+    async def test_format_fixed(self) -> None:
+        """Test FORMAT-FIXED converter."""
         interp = StandardInterpreter()
         await interp.run("""
-            22 7 / 2 >FIXED
+            22 7 / 2 FORMAT-FIXED
         """)
         stack = interp.get_stack()
         assert stack[0] == "3.14"
@@ -1875,11 +1875,11 @@ class TestDateTimeOperations:
         assert date.day == 2
 
     @pytest.mark.asyncio
-    async def test_subtract_dates(self) -> None:
-        """Test SUBTRACT-DATES operation."""
+    async def test_days_between(self) -> None:
+        """Test DAYS-BETWEEN operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            2020-10-21 2020-11-02 SUBTRACT-DATES
+            2020-10-21 2020-11-02 DAYS-BETWEEN
         """)
         stack = interp.get_stack()
         assert stack[0] == -12

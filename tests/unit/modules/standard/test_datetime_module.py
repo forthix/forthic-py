@@ -329,31 +329,31 @@ async def test_ADD_DAYS_with_literal_date(interp):
 
 
 @pytest.mark.asyncio
-async def test_SUBTRACT_DATES_calculates_positive_difference(interp):
-    """SUBTRACT-DATES calculates positive difference."""
+async def test_DAYS_BETWEEN_calculates_positive_difference(interp):
+    """DAYS-BETWEEN calculates positive difference."""
     # date1 - date2 = 2024-01-15 - 2024-01-25 = -10
-    await interp.run("'2024-01-15' >DATE '2024-01-25' >DATE SUBTRACT-DATES")
+    await interp.run("'2024-01-15' >DATE '2024-01-25' >DATE DAYS-BETWEEN")
     assert interp.stack_pop() == -10
 
 
 @pytest.mark.asyncio
-async def test_SUBTRACT_DATES_calculates_negative_difference(interp):
-    """SUBTRACT-DATES calculates negative difference."""
-    await interp.run("'2020-10-21' >DATE '2020-11-02' >DATE SUBTRACT-DATES")
+async def test_DAYS_BETWEEN_calculates_negative_difference(interp):
+    """DAYS-BETWEEN calculates negative difference."""
+    await interp.run("'2020-10-21' >DATE '2020-11-02' >DATE DAYS-BETWEEN")
     assert interp.stack_pop() == -12
 
 
 @pytest.mark.asyncio
-async def test_SUBTRACT_DATES_with_literal_dates(interp):
-    """SUBTRACT-DATES with literal dates."""
-    await interp.run("2020-10-21 2020-11-02 SUBTRACT-DATES")
+async def test_DAYS_BETWEEN_with_literal_dates(interp):
+    """DAYS-BETWEEN with literal dates."""
+    await interp.run("2020-10-21 2020-11-02 DAYS-BETWEEN")
     assert interp.stack_pop() == -12
 
 
 @pytest.mark.asyncio
-async def test_SUBTRACT_DATES_with_same_date(interp):
-    """SUBTRACT-DATES with same date."""
-    await interp.run("'2024-01-15' >DATE '2024-01-15' >DATE SUBTRACT-DATES")
+async def test_DAYS_BETWEEN_with_same_date(interp):
+    """DAYS-BETWEEN with same date."""
+    await interp.run("'2024-01-15' >DATE '2024-01-15' >DATE DAYS-BETWEEN")
     assert interp.stack_pop() == 0
 
 
@@ -398,9 +398,9 @@ async def test_ADD_DAYS_with_null_date_returns_null(interp):
 
 
 @pytest.mark.asyncio
-async def test_SUBTRACT_DATES_with_null_dates_returns_null(interp):
-    """SUBTRACT-DATES with null dates returns null."""
-    await interp.run("NULL '2024-01-15' >DATE SUBTRACT-DATES")
+async def test_DAYS_BETWEEN_with_null_dates_returns_null(interp):
+    """DAYS-BETWEEN with null dates returns null."""
+    await interp.run("NULL '2024-01-15' >DATE DAYS-BETWEEN")
     assert interp.stack_pop() is None
 
 
@@ -432,6 +432,6 @@ async def test_date_arithmetic_chain(interp):
         7 ADD-DAYS
         14 ADD-DAYS
         TODAY
-        SUBTRACT-DATES
+        DAYS-BETWEEN
     """)
     assert interp.stack_pop() == 21
