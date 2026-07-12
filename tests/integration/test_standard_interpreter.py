@@ -281,7 +281,7 @@ class TestArrayOperations:
 
     @pytest.mark.asyncio
     async def test_append(self) -> None:
-        """Test APPEND operation."""
+        """Test APPEND operation (array-only, copy-on-write)."""
         interp = StandardInterpreter()
 
         # Test append to array
@@ -292,14 +292,18 @@ class TestArrayOperations:
         array = interp.stack_pop()
         assert array == [1, 2, 3, 4]
 
-        # Test append to record
-        await interp.run("""
-            [["a" 1] ["b" 2]] REC  ["c" 3] APPEND
-        """)
-        assert len(interp.get_stack()) == 1
-        rec = interp.stack_pop()
-        values = [rec[k] for k in ["a", "b", "c"]]
-        assert values == [1, 2, 3]
+        # APPEND does not mutate its input array
+        original = [1, 2, 3]
+        interp.stack_push(original)
+        await interp.run("4 APPEND")
+        assert interp.stack_pop() == [1, 2, 3, 4]
+        assert original == [1, 2, 3]
+
+        # APPEND is array-only: records are rejected
+        with pytest.raises(Exception, match="APPEND requires an array"):
+            await interp.run("""
+                [["a" 1] ["b" 2]] REC  ["c" 3] APPEND
+            """)
 
     @pytest.mark.asyncio
     async def test_reverse(self) -> None:
@@ -381,11 +385,11 @@ class TestDataStructureOperations:
 
     @pytest.mark.asyncio
     async def test_length(self) -> None:
-        """Test LENGTH operation."""
+        """Test LENGTH (containers) and STR-LENGTH (strings)."""
         interp = StandardInterpreter()
         await interp.run("""
             ['a' 'b' 'c'] LENGTH
-            "Howdy" LENGTH
+            "Howdy" STR-LENGTH
         """)
         assert interp.stack_pop() == 5
         assert interp.stack_pop() == 3
@@ -493,11 +497,11 @@ class TestStackOperations:
     """Test stack operations."""
 
     @pytest.mark.asyncio
-    async def test_pop(self) -> None:
-        """Test POP operation."""
+    async def test_drop(self) -> None:
+        """Test DROP operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            1 2 3 4 5 POP
+            1 2 3 4 5 DROP
         """)
         stack = interp.get_stack()
         assert len(stack) == 4
@@ -542,8 +546,8 @@ class TestArithmetic:
             2 4 /
             5 3 MOD
             2.51 ROUND
-            [1 2 3] +
-            [2 3 4] *
+            [1 2 3] SUM
+            [2 3 4] PRODUCT
         """)
         stack = interp.get_stack()
         assert stack[0] == 6
@@ -759,7 +763,7 @@ class TestAdvancedMapAndIteration:
         interp.stack_push(by_key)
 
         await interp.run("""
-            "" SWAP "'status' REC@ CONCAT" FOREACH
+            [] SWAP "'status' REC@ APPEND" FOREACH CONCAT
         """)
         string = interp.stack_pop()
         assert string == "OPENOPENIN PROGRESSCLOSEDIN PROGRESSOPENCLOSED"
@@ -815,7 +819,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_by_field(self) -> None:
-        """Test BY_FIELD operation."""
+        """Test BY-FIELD operation."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -829,13 +833,13 @@ class TestGroupingAndRelabeling:
 
         interp = StandardInterpreter()
         interp.stack_push(make_records())
-        await interp.run("'key' BY_FIELD")
+        await interp.run("'key' BY-FIELD")
         grouped = interp.stack_pop()
         assert grouped[104]["status"] == "IN PROGRESS"
 
     @pytest.mark.asyncio
     async def test_by_field_with_nulls(self) -> None:
-        """Test BY_FIELD with null values."""
+        """Test BY-FIELD with null values."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -851,13 +855,13 @@ class TestGroupingAndRelabeling:
         records = make_records()
         records.extend([None, None])
         interp.stack_push(records)
-        await interp.run("'key' BY_FIELD")
+        await interp.run("'key' BY-FIELD")
         grouped = interp.stack_pop()
         assert grouped[104]["status"] == "IN PROGRESS"
 
     @pytest.mark.asyncio
     async def test_group_by_field_array(self) -> None:
-        """Test GROUP_BY_FIELD operation on array."""
+        """Test GROUP-BY-FIELD operation on array."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -871,7 +875,7 @@ class TestGroupingAndRelabeling:
 
         interp = StandardInterpreter()
         interp.stack_push(make_records())
-        await interp.run("'assignee' GROUP_BY_FIELD")
+        await interp.run("'assignee' GROUP-BY-FIELD")
         grouped = interp.stack_pop()
         assert sorted(grouped.keys()) == ["user1", "user2"]
         assert len(grouped["user1"]) == 4
@@ -879,7 +883,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_group_by_field_record(self) -> None:
-        """Test GROUP_BY_FIELD operation on record."""
+        """Test GROUP-BY-FIELD operation on record."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -896,7 +900,7 @@ class TestGroupingAndRelabeling:
         by_key = {rec["key"]: rec for rec in records}
         interp.stack_push(by_key)
 
-        await interp.run("'assignee' GROUP_BY_FIELD")
+        await interp.run("'assignee' GROUP-BY-FIELD")
         grouped_rec = interp.stack_pop()
         assert sorted(grouped_rec.keys()) == ["user1", "user2"]
         assert len(grouped_rec["user1"]) == 4
@@ -904,13 +908,13 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_group_by_field_list_valued(self) -> None:
-        """Test GROUP_BY_FIELD on list-valued field."""
+        """Test GROUP-BY-FIELD on list-valued field."""
         interp = StandardInterpreter()
         interp.stack_push([
             {"id": 1, "attrs": ["blue", "important"]},
             {"id": 2, "attrs": ["red"]},
         ])
-        await interp.run("'attrs' GROUP_BY_FIELD")
+        await interp.run("'attrs' GROUP-BY-FIELD")
         grouped_rec = interp.stack_pop()
         assert grouped_rec["blue"][0]["id"] == 1
         assert grouped_rec["important"][0]["id"] == 1
@@ -918,7 +922,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_group_by(self) -> None:
-        """Test GROUP_BY operation."""
+        """Test GROUP-BY operation."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -933,7 +937,7 @@ class TestGroupingAndRelabeling:
         interp = StandardInterpreter()
         interp.stack_push(make_records())
         await interp.run("""
-            "'assignee' REC@" GROUP_BY
+            "'assignee' REC@" GROUP-BY
         """)
         grouped = interp.stack_pop()
         assert sorted(grouped.keys()) == ["user1", "user2"]
@@ -942,7 +946,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_group_by_with_key(self) -> None:
-        """Test GROUP_BY with key option."""
+        """Test GROUP-BY with key option."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -958,7 +962,7 @@ class TestGroupingAndRelabeling:
         interp.stack_push(make_records())
         await interp.run("""
             ['key' 'val'] VARIABLES
-            "val ! key ! key @ 3 MOD" [.with_key TRUE] ~> GROUP_BY
+            "val ! key ! key @ 3 MOD" [.with_key TRUE] ~> GROUP-BY
         """)
         grouped = interp.stack_pop()
         assert sorted(grouped.keys()) == ["0", "1", "2"]
@@ -968,10 +972,10 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_groups_of_array(self) -> None:
-        """Test GROUPS_OF on array."""
+        """Test GROUPS-OF on array."""
         interp = StandardInterpreter()
         await interp.run("""
-            [1 2 3 4 5 6 7 8] 3 GROUPS_OF
+            [1 2 3 4 5 6 7 8] 3 GROUPS-OF
         """)
         groups = interp.stack_pop()
         assert groups[0] == [1, 2, 3]
@@ -980,7 +984,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_groups_of_record_direct(self) -> None:
-        """Test GROUPS_OF on record."""
+        """Test GROUPS-OF on record."""
         interp = StandardInterpreter()
         await interp.run("""
             [
@@ -992,7 +996,7 @@ class TestGroupingAndRelabeling:
               ['f' 6]
               ['g' 7]
               ['h' 8]
-            ] REC 3 GROUPS_OF
+            ] REC 3 GROUPS-OF
         """)
         groups = interp.stack_pop()
         assert groups[0] == {"a": 1, "b": 2, "c": 3}
@@ -1001,7 +1005,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_groups_of_using_record(self) -> None:
-        """Test GROUPS_OF using record."""
+        """Test GROUPS-OF using record."""
         def make_records():
             return [
                 {"key": 100, "assignee": "user1", "status": "OPEN"},
@@ -1019,7 +1023,7 @@ class TestGroupingAndRelabeling:
         interp.stack_push(by_key)
 
         await interp.run("""
-            3 GROUPS_OF
+            3 GROUPS-OF
         """)
         recs = interp.stack_pop()
         assert len(recs[0].keys()) == 3
@@ -1048,7 +1052,7 @@ class TestGroupingAndRelabeling:
 
     @pytest.mark.asyncio
     async def test_invert_keys(self) -> None:
-        """Test INVERT_KEYS operation."""
+        """Test INVERT-KEYS operation."""
         def make_status_to_manager_to_ids():
             return {
                 "open": {
@@ -1067,7 +1071,7 @@ class TestGroupingAndRelabeling:
         interp = StandardInterpreter()
         status_to_manager_to_ids = make_status_to_manager_to_ids()
         interp.stack_push(status_to_manager_to_ids)
-        await interp.run("INVERT_KEYS")
+        await interp.run("INVERT-KEYS")
         res = interp.stack_pop()
         expected = {
             "manager1": {
@@ -1114,10 +1118,10 @@ class TestAdvancedArrayOperations:
 
     @pytest.mark.asyncio
     async def test_zip_with_arrays(self) -> None:
-        """Test ZIP_WITH operation on arrays."""
+        """Test ZIP-WITH operation on arrays."""
         interp = StandardInterpreter()
         await interp.run("""
-            [10 20] [1 2] "+" ZIP_WITH
+            [10 20] [1 2] "+" ZIP-WITH
         """)
         array = interp.stack_pop()
         assert array[0] == 11
@@ -1125,10 +1129,10 @@ class TestAdvancedArrayOperations:
 
     @pytest.mark.asyncio
     async def test_zip_with_records(self) -> None:
-        """Test ZIP_WITH operation on records."""
+        """Test ZIP-WITH operation on records."""
         interp = StandardInterpreter()
         await interp.run("""
-            [['a' 1] ['b' 2]] REC [['a' 10] ['b' 20]] REC "+" ZIP_WITH
+            [['a' 1] ['b' 2]] REC [['a' 10] ['b' 20]] REC "+" ZIP-WITH
         """)
         record = interp.stack_pop()
         assert sorted(record.keys()) == ["a", "b"]
@@ -1302,11 +1306,11 @@ class TestAdvancedArrayOperations:
         assert stack[1] == [3, 4, 5, 6]
 
     @pytest.mark.asyncio
-    async def test_drop(self) -> None:
-        """Test DROP operation."""
+    async def test_skip(self) -> None:
+        """Test SKIP operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            [0 1 2 3 4 5 6] 4 DROP
+            [0 1 2 3 4 5 6] 4 SKIP
         """)
         stack = interp.get_stack()
         assert stack[0] == [4, 5, 6]
@@ -1466,13 +1470,13 @@ class TestAdvancedArrayOperations:
 
     @pytest.mark.asyncio
     async def test_key_of_array(self) -> None:
-        """Test KEY_OF operation on array."""
+        """Test KEY-OF operation on array."""
         interp = StandardInterpreter()
         await interp.run("""
             ['x'] VARIABLES
             ['a' 'b' 'c' 'd'] x !
-            x @  'c' KEY_OF
-            x @  'z' KEY_OF
+            x @  'c' KEY-OF
+            x @  'z' KEY-OF
         """)
         stack = interp.get_stack()
         assert stack[0] == 2
@@ -1480,10 +1484,10 @@ class TestAdvancedArrayOperations:
 
     @pytest.mark.asyncio
     async def test_key_of_record(self) -> None:
-        """Test KEY_OF operation on record."""
+        """Test KEY-OF operation on record."""
         interp = StandardInterpreter()
         await interp.run("""
-            [['a' 1] ['b' 2] ['c' 3]] REC  2 KEY_OF
+            [['a' 1] ['b' 2] ['c' 3]] REC  2 KEY-OF
         """)
         stack = interp.get_stack()
         assert stack[0] == "b"
@@ -1530,30 +1534,30 @@ class TestSpecialAndMiscOperations:
 
     @pytest.mark.asyncio
     async def test_re_match(self) -> None:
-        """Test RE_MATCH operation."""
+        """Test RE-MATCH operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            "123message456" "\\d{3}.*\\d{3}" RE_MATCH
+            "123message456" "\\d{3}.*\\d{3}" RE-MATCH
         """)
         stack = interp.get_stack()
         assert stack[0] is not None
 
     @pytest.mark.asyncio
     async def test_re_match_group(self) -> None:
-        """Test RE_MATCH_GROUP operation."""
+        """Test RE-MATCH-GROUP operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            "123message456" "\\d{3}(.*)\\d{3}" RE_MATCH 1 RE_MATCH_GROUP
+            "123message456" "\\d{3}(.*)\\d{3}" RE-MATCH 1 RE-MATCH-GROUP
         """)
         stack = interp.get_stack()
         assert stack[0] == "message"
 
     @pytest.mark.asyncio
     async def test_re_match_all(self) -> None:
-        """Test RE_MATCH_ALL operation."""
+        """Test RE-MATCH-ALL operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            "mr-android ios my-android web test-web" ".*?(android|ios|web|seo)" RE_MATCH_ALL
+            "mr-android ios my-android web test-web" ".*?(android|ios|web|seo)" RE-MATCH-ALL
         """)
         stack = interp.get_stack()
         assert stack[0] == ["android", "ios", "android", "web", "web"]
@@ -1637,15 +1641,15 @@ class TestSpecialAndMiscOperations:
         assert interp.stack_pop() == "2021-01-01"
 
     @pytest.mark.asyncio
-    async def test_pipe_rec_at(self) -> None:
-        """Test |REC@| operation."""
+    async def test_pipe_rec_at_composition(self) -> None:
+        """|REC@ is removed; its use cases compose from MAP + REC@."""
         interp = StandardInterpreter()
         interp.stack_push([{"a": 1}, {"a": 2}, {"a": 3}])
-        await interp.run("""'a' |REC@""")
+        await interp.run(""""'a' REC@" MAP""")
         assert interp.stack_pop() == [1, 2, 3]
 
         interp.stack_push([{"a": {"b": 1}}, {"a": {"b": 2}}, {"a": {"b": 3}}])
-        await interp.run("""['a' 'b'] |REC@""")
+        await interp.run(""""['a' 'b'] REC@" MAP""")
         assert interp.stack_pop() == [1, 2, 3]
 
 
@@ -1731,12 +1735,12 @@ class TestMaxMinMean:
 
     @pytest.mark.asyncio
     async def test_max_two_numbers(self) -> None:
-        """Test MAX of two numbers."""
+        """Test MAX rejects the two-number form (array-only now)."""
         interp = StandardInterpreter()
         interp.stack_push(4)
         interp.stack_push(18)
-        await interp.run("MAX")
-        assert interp.stack_pop() == 18
+        with pytest.raises(Exception, match="requires an array"):
+            await interp.run("MAX")
 
     @pytest.mark.asyncio
     async def test_max_array(self) -> None:
@@ -1748,12 +1752,12 @@ class TestMaxMinMean:
 
     @pytest.mark.asyncio
     async def test_min_two_numbers(self) -> None:
-        """Test MIN of two numbers."""
+        """Test MIN rejects the two-number form (array-only now)."""
         interp = StandardInterpreter()
         interp.stack_push(4)
         interp.stack_push(18)
-        await interp.run("MIN")
-        assert interp.stack_pop() == 4
+        with pytest.raises(Exception, match="requires an array"):
+            await interp.run("MIN")
 
     @pytest.mark.asyncio
     async def test_min_array(self) -> None:
@@ -1834,11 +1838,11 @@ class TestMaxMinMean:
 
     @pytest.mark.asyncio
     async def test_divide(self) -> None:
-        """Test DIVIDE operation."""
+        """Test / operation (classic DIVIDE dropped)."""
         interp = StandardInterpreter()
         interp.stack_push(10)
         interp.stack_push(2)
-        await interp.run("DIVIDE")
+        await interp.run("/")
         assert interp.stack_pop() == 5
 
 
@@ -1879,7 +1883,7 @@ class TestProfiling:
         await interp.run("""
             PROFILE-START
             [1 "1 +" 6 <REPEAT]
-            PROFILE-END POP
+            PROFILE-END DROP
             PROFILE-DATA
         """)
         stack = interp.get_stack()
@@ -1932,7 +1936,7 @@ class TestErrors:
         """Test unknown module error."""
         interp = StandardInterpreter()
         with pytest.raises(UnknownModuleError) as exc_info:
-            await interp.run("['garbage'] USE_MODULES")
+            await interp.run("['garbage'] USE-MODULES")
 
         assert exc_info.value.module_name == "garbage"
 
@@ -1941,7 +1945,7 @@ class TestErrors:
         """Test stack underflow error."""
         interp = StandardInterpreter()
         with pytest.raises(StackUnderflowError):
-            await interp.run("POP")
+            await interp.run("DROP")
 
     @pytest.mark.asyncio
     async def test_missing_semicolon(self) -> None:

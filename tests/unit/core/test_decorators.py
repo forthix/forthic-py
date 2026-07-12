@@ -347,27 +347,39 @@ class TestStackNotationParsing:
         """Test parsing simple stack notation."""
         from forthic.decorators.word import parse_stack_notation
 
-        count, has_opts = parse_stack_notation("( a:any b:any -- result:any )")
+        count, has_opts, has_output = parse_stack_notation("( a:any b:any -- result:any )")
         assert count == 2
         assert has_opts is False
+        assert has_output is True
 
     def test_parse_no_inputs(self) -> None:
         """Test parsing notation with no inputs."""
         from forthic.decorators.word import parse_stack_notation
 
-        count, has_opts = parse_stack_notation("( -- value:any )")
+        count, has_opts, has_output = parse_stack_notation("( -- value:any )")
         assert count == 0
         assert has_opts is False
+        assert has_output is True
 
     def test_parse_with_options(self) -> None:
         """Test parsing notation with options."""
         from forthic.decorators.word import parse_stack_notation
 
-        count, has_opts = parse_stack_notation(
+        count, has_opts, has_output = parse_stack_notation(
             "( items:list [options:WordOptions] -- result:list )"
         )
         assert count == 1
         assert has_opts is True
+        assert has_output is True
+
+    def test_parse_no_output(self) -> None:
+        """A ( a -- ) effect declares no output: the wrapper must not push."""
+        from forthic.decorators.word import parse_stack_notation
+
+        count, has_opts, has_output = parse_stack_notation("( a:any -- )")
+        assert count == 1
+        assert has_opts is False
+        assert has_output is False
 
     def test_parse_invalid_notation(self) -> None:
         """Test that invalid notation raises error."""

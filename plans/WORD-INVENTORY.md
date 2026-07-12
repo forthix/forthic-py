@@ -189,7 +189,19 @@ exclude from the portable-core count.
 
 ## Porting batches (canonical words only — every batch TODO)
 
-**Batch 0 — collision fixes first: TODO**
+**Batch 0 — collision fixes first: DONE (feat/word-batch0)**
+Also landed with this batch: **stack-effect-driven push** (the decision on
+the @ForthicWord None-return gap): the declared stack effect's output side
+now drives the wrapper — a declared output always pushes (Python None is
+Forthic NULL); `( ... -- )` never pushes, and a word that returns a value
+anyway raises at execution. This made the effect strings load-bearing
+(inputs already were) and fixed the `[] LAST` / `NULL REVERSE` stranding
+bugs wholesale. |REC@'s removal was pulled forward from Batch 3: it could
+not express itself honestly under the new contract (it declared an output
+while MAP pushed for it). The decorator guard against defaulted
+underscore names was NOT added — py-only host modules (pandas, the
+examples module) legitimately default method names; the sweep below fixed
+the standard modules instead. Original spec:
 - array DROP → SKIP; add core DROP (pop); drop classic POP; drop IDENTITY
   (NOP remains). Tombstones for `1 2 DROP` old meaning.
 - CONCAT array-only; two-string form rejected with a helpful message.

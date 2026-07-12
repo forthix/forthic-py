@@ -31,11 +31,11 @@ class CoreModule(DecoratedModule):
 Essential interpreter operations for stack manipulation, variables, control flow, and module system.
 
 ## Categories
-- Stack: POP, DUP, SWAP
+- Stack: DROP, DUP, SWAP
 - Variables: VARIABLES, !, @, !@
-- Module: EXPORT, USE_MODULES
+- Module: EXPORT, USE-MODULES
 - Execution: INTERPRET
-- Control: IDENTITY, NOP, DEFAULT, *DEFAULT, NULL, ARRAY?
+- Control: NOP, DEFAULT, *DEFAULT, NULL, ARRAY?
 - Options: ~> (converts array to WordOptions)
 - Profiling: PROFILE-START, PROFILE-TIMESTAMP, PROFILE-END, PROFILE-DATA
 - String: INTERPOLATE, PRINT
@@ -84,8 +84,10 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # ==================
 
     @WordDecorator("( a:any -- )", "Removes top item from stack")
-    async def POP(self, a: Any) -> None:
-        # No return = push nothing
+    async def DROP(self, a: Any) -> None:
+        # Declares no output: the wrapper pushes nothing.
+        # (Classic POP dropped — DROP is the canonical name. The old array
+        # skip-first-n meaning of DROP is now SKIP.)
         pass
 
     @ForthicDirectWord("( a:any -- a:any a:any )", "Duplicates top stack item")
@@ -186,7 +188,7 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
         names = interp.stack_pop()
         interp.cur_module().add_exportable(names)
 
-    @ForthicDirectWord("( names:list -- )", "Imports modules by name")
+    @ForthicDirectWord("( names:list -- )", "Imports modules by name", "USE-MODULES")
     async def USE_MODULES(self, interp: Interpreter) -> None:
         names = interp.stack_pop()
         if names:
@@ -195,10 +197,6 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # ==================
     # Control Flow
     # ==================
-
-    @WordDecorator("( -- )", "Does nothing (identity operation)")
-    async def IDENTITY(self) -> None:
-        pass
 
     @WordDecorator("( -- )", "Does nothing (no operation)")
     async def NOP(self) -> None:
