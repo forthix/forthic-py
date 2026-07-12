@@ -31,17 +31,17 @@ class ArrayModule(DecoratedModule):
 Array and collection operations for manipulating arrays and records.
 
 ## Categories
-- Access: NTH, LAST, SLICE, TAKE, DROP, LENGTH, INDEX, KEY-OF
+- Access: NTH, LAST, SLICE, TAKE, SKIP, LENGTH, INDEX, KEY-OF
 - Transform: MAP, REVERSE
-- Combine: APPEND, ZIP, ZIP_WITH, CONCAT
+- Combine: APPEND, ZIP, ZIP-WITH
 - Filter: SELECT, UNIQUE, DIFFERENCE, INTERSECTION, UNION
 - Sort: SORT, SHUFFLE, ROTATE
-- Group: BY_FIELD, GROUP_BY_FIELD, GROUP_BY, GROUPS_OF
+- Group: BY-FIELD, GROUP-BY-FIELD, GROUP-BY, GROUPS-OF
 - Utility: <REPEAT, FOREACH, REDUCE, UNPACK, FLATTEN
 
 ## Options
 Several words support options via the ~> operator using syntax: [.option_name value ...] ~> WORD
-- with_key: Push index/key before value (MAP, FOREACH, GROUP_BY, SELECT)
+- with_key: Push index/key before value (MAP, FOREACH, GROUP-BY, SELECT)
 - depth: Recursion depth for nested operations (MAP, FLATTEN)
 - outcomes: Map each element to {ok: value} / {error: info} (MAP)
 - push_rest: Push remaining items after operation (TAKE)
@@ -60,17 +60,17 @@ Several words support options via the ~> operator using syntax: [.option_name va
     # Access
     # ==================
 
-    @WordDecorator("( container:any -- length:number )", "Get length of array or record")
+    @WordDecorator("( container:any -- length:number )", "Length of an array or record. For strings, use STR-LENGTH.")
     async def LENGTH(self, container: Any) -> int:
         if container is None:
             return 0
         if isinstance(container, list):
             return len(container)
+        if isinstance(container, str):
+            raise ValueError("LENGTH operates on arrays and records. For strings, use STR-LENGTH.")
         if isinstance(container, dict):
             return len(container.keys())
-        if isinstance(container, str):
-            return len(container)
-        return 0
+        raise ValueError("LENGTH operates on arrays and records.")
 
     @ForthicDirectWord("( container:any n:number -- item:any )", "Get nth element from array or record")
     async def NTH(self, interp: Interpreter) -> None:
@@ -198,8 +198,8 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return taken
 
-    @WordDecorator("( container:any n:number -- result:any )", "Drop first n elements from array or record")
-    async def DROP(self, container: Any, n: int) -> Any:
+    @WordDecorator("( container:any n:number -- result:any )", "Skip first n elements from array or record")
+    async def SKIP(self, container: Any, n: int) -> Any:
         if container is None:
             return []
         if n <= 0:
@@ -212,7 +212,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             keys = list(container.keys())
             return {k: container[k] for k in keys[n:]}
 
-    @ForthicDirectWord("( container:any value:any -- key:any )", "Find key of value in container")
+    @ForthicDirectWord("( container:any value:any -- key:any )", "Find key of value in container", "KEY-OF")
     async def KEY_OF(self, interp: Interpreter) -> None:
         value = interp.stack_pop()
         container = interp.stack_pop()
@@ -380,17 +380,15 @@ Several words support options via the ~> operator using syntax: [.option_name va
     # Combine
     # ==================
 
-    @WordDecorator("( container:any item:any -- container:any )", "Append item to array or add key-value to record")
+    @WordDecorator("( array:any[] item:any -- array:any[] )", "Append item to array. For records, use JQ! to set a key.")
     async def APPEND(self, container: Any, item: Any) -> Any:
         result = container if container is not None else []
 
-        if isinstance(result, list):
-            result.append(item)
-        else:
-            # If not a list, treat as record - item should be [key, value]
-            result[item[0]] = item[1]
+        if not isinstance(result, list):
+            raise ValueError("APPEND requires an array. For records, use JQ! to set a key.")
 
-        return result
+        # Copy first: append() mutates in place, which would alias the input
+        return [*result, item]
 
     @WordDecorator("( container1:any[] container2:any[] -- result:any[] )", "Zip two arrays into array of pairs")
     async def ZIP(self, container1: list, container2: list) -> Any:
@@ -413,7 +411,9 @@ Several words support options via the ~> operator using syntax: [.option_name va
         return result
 
     @WordDecorator(
-        "( container1:any[] container2:any[] forthic:string -- result:any[] )", "Zip two arrays with combining function"
+        "( container1:any[] container2:any[] forthic:string -- result:any[] )",
+        "Zip two arrays with combining function",
+        "ZIP-WITH",
     )
     async def ZIP_WITH(self, container1: list, container2: list, forthic: str) -> Any:
         interp = self._module.interp
@@ -698,7 +698,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return result
 
-    @WordDecorator("( container:any[] field:string -- indexed:any )", "Index records by field value")
+    @WordDecorator("( container:any[] field:string -- indexed:any )", "Index records by field value", "BY-FIELD")
     async def BY_FIELD(self, container: list, field: str) -> dict:
         if container is None:
             container = []
@@ -717,7 +717,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return result
 
-    @WordDecorator("( container:any[] field:string -- grouped:any )", "Group records by field value")
+    @WordDecorator("( container:any[] field:string -- grouped:any )", "Group records by field value", "GROUP-BY-FIELD")
     async def GROUP_BY_FIELD(self, container: list, field: str) -> dict:
         if container is None:
             container = []
@@ -744,7 +744,8 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @ForthicDirectWord(
         "( items:any forthic:string [options:WordOptions] -- grouped:any )",
-        "Group items by function result. Options: with_key (bool)"
+        "Group items by function result. Options: with_key (bool)",
+        "GROUP-BY",
     )
     async def GROUP_BY(self, interp: Interpreter) -> None:
         options_dict = {}
@@ -789,7 +790,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         interp.stack_push(result)
 
-    @WordDecorator("( container:any[] n:number -- groups:any[] )", "Split array into groups of size n", "GROUPS_OF")
+    @WordDecorator("( container:any[] n:number -- groups:any[] )", "Split array into groups of size n", "GROUPS-OF")
     async def GROUPS_OF(self, container: list, n: int) -> list:
         if n <= 0:
             raise ValueError("GROUPS-OF requires group size > 0")

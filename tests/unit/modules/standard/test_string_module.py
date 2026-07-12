@@ -22,8 +22,14 @@ class TestStringModule:
 
     @pytest.mark.asyncio
     async def test_concat_two_strings(self, interp):
-        """Test CONCAT with two strings."""
-        await interp.run("'Hello' ' World' CONCAT")
+        """Test CONCAT rejects two loose strings (array-only now)."""
+        with pytest.raises(Exception, match=r"\[s1 s2\] CONCAT"):
+            await interp.run("'Hello' ' World' CONCAT")
+
+    @pytest.mark.asyncio
+    async def test_concat_null_elements(self, interp):
+        """Test CONCAT renders null elements as empty strings."""
+        await interp.run("['Hello' NULL ' World'] CONCAT")
         assert interp.stack_pop() == "Hello World"
 
     @pytest.mark.asyncio
@@ -94,38 +100,38 @@ class TestStringModule:
 
     @pytest.mark.asyncio
     async def test_re_match_success(self, interp):
-        """Test RE_MATCH with successful match."""
-        await interp.run("'test123' 'test[0-9]+' RE_MATCH")
+        """Test RE-MATCH with successful match."""
+        await interp.run("'test123' 'test[0-9]+' RE-MATCH")
         result = interp.stack_pop()
         assert result is not None
         assert result[0] == "test123"
 
     @pytest.mark.asyncio
     async def test_re_match_failure(self, interp):
-        """Test RE_MATCH with no match."""
-        await interp.run("'test' '[0-9]+' RE_MATCH")
+        """Test RE-MATCH with no match."""
+        await interp.run("'test' '[0-9]+' RE-MATCH")
         assert interp.stack_pop() is False
 
     @pytest.mark.asyncio
     async def test_re_match_all(self, interp):
-        """Test RE_MATCH_ALL."""
-        await interp.run("'test1 test2 test3' 'test([0-9])' RE_MATCH_ALL")
+        """Test RE-MATCH-ALL."""
+        await interp.run("'test1 test2 test3' 'test([0-9])' RE-MATCH-ALL")
         assert interp.stack_pop() == ["1", "2", "3"]
 
     @pytest.mark.asyncio
     async def test_re_match_group(self, interp):
-        """Test RE_MATCH_GROUP."""
-        await interp.run("'test123' 'test([0-9]+)' RE_MATCH 1 RE_MATCH_GROUP")
+        """Test RE-MATCH-GROUP."""
+        await interp.run("'test123' 'test([0-9]+)' RE-MATCH 1 RE-MATCH-GROUP")
         assert interp.stack_pop() == "123"
 
     @pytest.mark.asyncio
     async def test_url_encode(self, interp):
-        """Test URL_ENCODE."""
-        await interp.run("'hello world' URL_ENCODE")
+        """Test URL-ENCODE."""
+        await interp.run("'hello world' URL-ENCODE")
         assert interp.stack_pop() == "hello%20world"
 
     @pytest.mark.asyncio
     async def test_url_decode(self, interp):
-        """Test URL_DECODE."""
-        await interp.run("'hello%20world' URL_DECODE")
+        """Test URL-DECODE."""
+        await interp.run("'hello%20world' URL-DECODE")
         assert interp.stack_pop() == "hello world"

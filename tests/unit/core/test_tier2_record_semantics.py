@@ -5,9 +5,8 @@ Port of forthic-rs tests/tier2_record_semantics_test.rs (the post-scrub ts
 #31/#33 behavior). Records iterate, index, slice, and serialize in
 INSERTION order — every sorted() on record keys was a bug.
 
-Deferred to their word batches: TAKE-LAST (Batch 2), DELETE (Batch 3), and
-the DROP -> SKIP rename (Batch 0) — the SKIP tests here run against py's
-current DROP spelling.
+Deferred to their word batches: TAKE-LAST (Batch 2) and DELETE (Batch 3).
+The DROP -> SKIP rename (Batch 0) has landed — the SKIP tests here use SKIP.
 """
 
 import pytest
@@ -66,7 +65,7 @@ async def test_json_round_trip_preserves_order():
     assert result == '{"z":1,"a":2,"m":3}'
 
 
-# ===== TAKE / SKIP (py: DROP) on records =====
+# ===== TAKE / SKIP on records =====
 
 
 @pytest.mark.asyncio
@@ -93,11 +92,11 @@ async def test_take_push_rest_on_arrays():
 
 @pytest.mark.asyncio
 async def test_skip_on_record():
-    rest = await run(f"{ZAM} 1 DROP")
+    rest = await run(f"{ZAM} 1 SKIP")
     assert isinstance(rest, dict)
     assert list(rest.keys()) == ["a", "m"]
     # n <= 0 skips nothing
-    unchanged = await run(f"{ZAM} 0 DROP")
+    unchanged = await run(f"{ZAM} 0 SKIP")
     assert list(unchanged.keys()) == ["z", "a", "m"]
 
 

@@ -149,6 +149,19 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
   round-out incl. DAYS-BETWEEN + classic drops, USE-MODULES options).
   Reuse the rs batch specs; spec-extraction agents per batch only where
   the rs plans are thin.
+  - **Batch 0 DONE (2026-07-12, feat/word-batch0).** Infrastructure
+    decision landed first (owner call): **stack-effect-driven push** — the
+    declared output side of every @ForthicWord effect now drives whether
+    the return value is pushed (None returns become Forthic NULL when an
+    output is declared; declared-void words that return anyway raise).
+    Then the collisions: DROP now pops (SKIP is the old skip-n; classic
+    POP + IDENTITY dropped); CONCAT array-only; +/* strictly two-operand
+    with PRODUCT ported and ADD/SUBTRACT/MULTIPLY/DIVIDE dropped; MAX/MIN
+    array-only null-skipping; APPEND array-only copy-on-write; LENGTH
+    rejects strings toward the new STR-LENGTH; the 14 underscore renames;
+    math's duplicate < <= > >= deleted; |REC@ removed (pulled forward
+    from Batch 3 — it lied about its stack effect). Spec:
+    tests/unit/core/test_word_batch0.py.
 - **Phase 4 — Interpolation redesign.** `${name}` contract into core;
   delete the bare-dot grammar (and `{.var}@` if present); PRINT shares.
   Port ts PR #41 / rs PR #15 directly.

@@ -5,7 +5,6 @@ Provides operations for working with key-value data structures.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -26,8 +25,8 @@ class RecordModule(DecoratedModule):
 Record (object/dictionary) manipulation operations for working with key-value data structures.
 
 ## Categories
-- Core: REC, REC@, |REC@, <REC!
-- Transform: RELABEL, INVERT_KEYS, REC_DEFAULTS, <DEL
+- Core: REC, REC@, <REC!
+- Transform: RELABEL, INVERT-KEYS, REC-DEFAULTS, <DEL
 - Access: KEYS, VALUES
             """,
         )
@@ -91,15 +90,6 @@ Record (object/dictionary) manipulation operations for working with key-value da
         result = RecordModule.drill_for_value(rec, fields)
         return result
 
-    @WordDecorator("( records:any field:any -- values:any )", "Map REC@ over array of records", "|REC@")
-    async def pipe_REC_at(self, records: Any, field: Any) -> Any:
-        assert self._module.interp is not None
-        # Push records back and field, then use MAP with REC@
-        self._module.interp.stack_push(records)
-        await self._module.interp.run(f"'{json.dumps(field)} REC@' MAP")
-        # Result already on stack from MAP, return None to avoid double-push
-        return None
-
     @WordDecorator("( rec:any value:any field:any -- rec:any )", "Set value in record at field path", "<REC!")
     async def l_REC_bang(self, rec: Any, value: Any, field: Any) -> dict:
         _rec = rec if rec else {}
@@ -155,7 +145,7 @@ Record (object/dictionary) manipulation operations for working with key-value da
 
         return result
 
-    @WordDecorator("( record:any -- inverted:any )", "Invert two-level nested record structure", "INVERT_KEYS")
+    @WordDecorator("( record:any -- inverted:any )", "Invert two-level nested record structure", "INVERT-KEYS")
     async def INVERT_KEYS(self, record: dict) -> dict:
         result: dict = {}
         for first_key in record.keys():
@@ -169,7 +159,7 @@ Record (object/dictionary) manipulation operations for working with key-value da
         return result
 
     @WordDecorator(
-        "( record:any key_vals:any[] -- record:any )", "Set default values for missing/empty fields", "REC_DEFAULTS"
+        "( record:any key_vals:any[] -- record:any )", "Set default values for missing/empty fields", "REC-DEFAULTS"
     )
     async def REC_DEFAULTS(self, record: dict, key_vals: list) -> dict:
         for key_val in key_vals:

@@ -6,8 +6,8 @@ a value. Law: `'CODE' TRY UNWRAP` ≡ `CODE`. TRY is transactional for the
 stack; MAP's outcomes option owns per-element error tolerance (TRY inside
 MAP would restore the pushed item and strand it).
 
-py spelling notes: the rs tests' DROP (stack pop) is py's POP until the
-Batch 0 rename lands.
+py spelling notes: since the Batch 0 rename, py's stack pop is DROP,
+matching the rs tests.
 """
 
 import pytest
@@ -71,7 +71,7 @@ async def test_try_wraps_failure_with_message_and_error_type():
 async def test_try_is_transactional_for_the_stack_on_failure():
     # The failing code consumes 2 and would have kept going; afterwards the
     # stack must be exactly [1, 2, outcome]
-    stack = await run_all("1 2 'POP POP NO-SUCH-WORD' TRY")
+    stack = await run_all("1 2 'DROP DROP NO-SUCH-WORD' TRY")
     assert len(stack) == 3
     assert stack[0] == 1
     assert stack[1] == 2
@@ -81,7 +81,7 @@ async def test_try_is_transactional_for_the_stack_on_failure():
 @pytest.mark.asyncio
 async def test_try_does_not_roll_back_side_effects():
     # catch_unwind semantics: the variable write before the failure persists
-    assert await run("'42 .written ! NO-SUCH-WORD' TRY POP .written @") == 42
+    assert await run("'42 .written ! NO-SUCH-WORD' TRY DROP .written @") == 42
 
 
 @pytest.mark.asyncio
@@ -105,7 +105,7 @@ async def test_try_success_consumes_inputs_legitimately():
 
 @pytest.mark.asyncio
 async def test_try_net_zero_code_succeeds_with_ok_null():
-    outcome = await run("'1 POP' TRY")
+    outcome = await run("'1 DROP' TRY")
     assert outcome == {"ok": None}
 
 

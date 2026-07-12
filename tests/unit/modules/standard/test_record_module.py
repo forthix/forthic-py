@@ -103,13 +103,13 @@ class TestTransformOperations:
 
     @pytest.mark.asyncio
     async def test_invert_keys(self, interp):
-        """Test INVERT_KEYS transposes nested records."""
+        """Test INVERT-KEYS transposes nested records."""
         await interp.run("""
             [
                 ['x' [['a' 1] ['b' 2]] REC]
                 ['y' [['a' 10] ['b' 20]] REC]
             ] REC
-            INVERT_KEYS
+            INVERT-KEYS
         """)
         result = interp.stack_pop()
         assert result["a"]["x"] == 1
@@ -119,10 +119,10 @@ class TestTransformOperations:
 
     @pytest.mark.asyncio
     async def test_rec_defaults(self, interp):
-        """Test REC_DEFAULTS fills in missing/empty values."""
+        """Test REC-DEFAULTS fills in missing/empty values."""
         await interp.run("""
             [['a' 1] ['b' NULL] ['c' '']] REC
-            [['b' 100] ['c' 200] ['d' 300]] REC_DEFAULTS
+            [['b' 100] ['c' 200] ['d' 300]] REC-DEFAULTS
         """)
         rec = interp.stack_pop()
         assert rec["a"] == 1
@@ -197,15 +197,23 @@ class TestAdvancedOperations:
     """Test advanced record operations."""
 
     @pytest.mark.asyncio
-    async def test_pipe_rec_at(self, interp):
-        """Test |REC@ extracts field from array of records."""
+    async def test_pipe_rec_at_is_gone(self, interp):
+        """Tombstone: |REC@ removed (injection-shaped: it json.dumps'd the
+        field into a Forthic string and ran it — ts removed it in #27).
+        The composition is 'FIELD REC@' MAP."""
+        with pytest.raises(Exception, match="REC@"):
+            await interp.run("[ ] 'key' |REC@")
+
+    @pytest.mark.asyncio
+    async def test_pipe_rec_at_replacement_composition(self, interp):
+        """The |REC@ use case via MAP + REC@."""
         await interp.run("""
             [
                 [['key' 101] ['value' 'alpha']] REC
                 [['key' 102] ['value' 'beta']] REC
                 [['key' 103] ['value' 'gamma']] REC
             ]
-            'key' |REC@
+            "'key' REC@" MAP
         """)
         keys = interp.stack_pop()
         assert keys == [101, 102, 103]

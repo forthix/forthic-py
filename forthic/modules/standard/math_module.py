@@ -6,7 +6,7 @@ Provides arithmetic, comparison, and mathematical utility functions.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
@@ -45,34 +45,13 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
     # Arithmetic Operations
     # ==================
 
-    @ForthicDirectWord(
-        "( a:number b:number -- sum:number ) OR ( numbers:number[] -- sum:number )",
-        "Add two numbers or sum array",
-        "+",
-    )
-    async def plus(self, interp: Interpreter) -> None:
-        b = interp.stack_pop()
-
-        # Case 1: Array on top of stack
-        if isinstance(b, list):
-            result = 0
-            for num in b:
-                if num is not None:
-                    result += num
-            interp.stack_push(result)
-            return
-
-        # Case 2: Two numbers
-        a = interp.stack_pop()
+    @WordDecorator("( a:number b:number -- sum:number )", "Add two numbers. For arrays use SUM.", "+")
+    async def plus(self, a: Any, b: Any) -> Any:
+        if isinstance(a, list) or isinstance(b, list):
+            raise ValueError("+ takes two numbers. For an array of numbers, use SUM.")
         num_a = 0 if a is None else a
         num_b = 0 if b is None else b
-        interp.stack_push(num_a + num_b)
-
-    @ForthicDirectWord(
-        "( a:number b:number -- sum:number ) OR ( numbers:number[] -- sum:number )", "Add two numbers or sum array", "ADD"
-    )
-    async def plus_ADD(self, interp: Interpreter) -> None:
-        return cast(None, await self.plus(interp))
+        return num_a + num_b
 
     @WordDecorator("( a:number b:number -- difference:number )", "Subtract b from a", "-")
     async def minus(self, a: float | int | None, b: float | int | None) -> float | int | None:
@@ -80,56 +59,16 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             return None
         return a - b
 
-    @WordDecorator("( a:number b:number -- difference:number )", "Subtract b from a", "SUBTRACT")
-    async def minus_SUBTRACT(self, a: float | int | None, b: float | int | None) -> float | int | None:
+    @WordDecorator("( a:number b:number -- product:number )", "Multiply two numbers. For arrays use PRODUCT.", "*")
+    async def times(self, a: Any, b: Any) -> Any:
+        if isinstance(a, list) or isinstance(b, list):
+            raise ValueError("* takes two numbers. For an array of numbers, use PRODUCT.")
         if a is None or b is None:
             return None
-        return a - b
-
-    @ForthicDirectWord(
-        "( a:number b:number -- product:number ) OR ( numbers:number[] -- product:number )",
-        "Multiply two numbers or product of array",
-        "*",
-    )
-    async def times(self, interp: Interpreter) -> None:
-        b = interp.stack_pop()
-
-        # Case 1: Array on top of stack
-        if isinstance(b, list):
-            result = 1
-            for num in b:
-                if num is None:
-                    interp.stack_push(None)
-                    return
-                result *= num
-            interp.stack_push(result)
-            return
-
-        # Case 2: Two numbers
-        a = interp.stack_pop()
-        if a is None or b is None:
-            interp.stack_push(None)
-            return
-        interp.stack_push(a * b)
-
-    @ForthicDirectWord(
-        "( a:number b:number -- product:number ) OR ( numbers:number[] -- product:number )",
-        "Multiply two numbers or product of array",
-        "MULTIPLY",
-    )
-    async def times_MULTIPLY(self, interp: Interpreter) -> None:
-        return cast(None, await self.times(interp))
+        return a * b
 
     @WordDecorator("( a:number b:number -- quotient:number )", "Divide a by b", "/")
     async def divide_by(self, a: float | int | None, b: float | int | None) -> float | None:
-        if a is None or b is None:
-            return None
-        if b == 0:
-            return None
-        return a / b
-
-    @WordDecorator("( a:number b:number -- quotient:number )", "Divide a by b", "DIVIDE")
-    async def divide_by_DIVIDE(self, a: float | int | None, b: float | int | None) -> float | None:
         if a is None or b is None:
             return None
         if b == 0:
@@ -216,41 +155,52 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
 
         return 0
 
-    @ForthicDirectWord(
-        "( a:number b:number -- max:number ) OR ( items:number[] -- max:number )", "Maximum of two numbers or array", "MAX"
+    @WordDecorator(
+        "( numbers:number[] -- max:number )",
+        "Maximum of an array of numbers. Null elements are skipped. Returns null for empty/all-null array.",
+        "MAX",
     )
-    async def MAX(self, interp: Interpreter) -> None:
-        b = interp.stack_pop()
+    async def MAX(self, numbers: Any) -> Any:
+        if not isinstance(numbers, list):
+            raise ValueError("MAX requires an array of numbers. For two numbers use > with IF.")
+        result = None
+        for num in numbers:
+            if num is None:
+                continue
+            if result is None or num > result:
+                result = num
+        return result
 
-        # Case 1: Array on top of stack
-        if isinstance(b, list):
-            if len(b) == 0:
-                interp.stack_push(None)
-                return
-            interp.stack_push(max(b))
-            return
-
-        # Case 2: Two values
-        a = interp.stack_pop()
-        interp.stack_push(max(a, b))
-
-    @ForthicDirectWord(
-        "( a:number b:number -- min:number ) OR ( items:number[] -- min:number )", "Minimum of two numbers or array", "MIN"
+    @WordDecorator(
+        "( numbers:number[] -- min:number )",
+        "Minimum of an array of numbers. Null elements are skipped. Returns null for empty/all-null array.",
+        "MIN",
     )
-    async def MIN(self, interp: Interpreter) -> None:
-        b = interp.stack_pop()
+    async def MIN(self, numbers: Any) -> Any:
+        if not isinstance(numbers, list):
+            raise ValueError("MIN requires an array of numbers. For two numbers use < with IF.")
+        result = None
+        for num in numbers:
+            if num is None:
+                continue
+            if result is None or num < result:
+                result = num
+        return result
 
-        # Case 1: Array on top of stack
-        if isinstance(b, list):
-            if len(b) == 0:
-                interp.stack_push(None)
-                return
-            interp.stack_push(min(b))
-            return
-
-        # Case 2: Two values
-        a = interp.stack_pop()
-        interp.stack_push(min(a, b))
+    @WordDecorator(
+        "( numbers:number[] -- product:number )",
+        "Product of array of numbers (1 if empty). Null elements yield null.",
+        "PRODUCT",
+    )
+    async def PRODUCT(self, numbers: Any) -> Any:
+        if not isinstance(numbers, list):
+            return None
+        result: Any = 1
+        for num in numbers:
+            if num is None:
+                return None
+            result *= num
+        return result
 
     @WordDecorator("( numbers:number[] -- sum:number )", "Sum of array (explicit)")
     async def SUM(self, numbers: list | None) -> float | int:
@@ -361,26 +311,6 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
             interp.stack_push(None)
         else:
             interp.stack_push(max(min_val, min(max_val, value)))
-
-    # ==================
-    # Comparison (from original implementation)
-    # ==================
-
-    @WordDecorator("( a:any b:any -- result:bool )", "Less than", "<")
-    async def less_than(self, a: Any, b: Any) -> bool:
-        return cast(bool, a < b)
-
-    @WordDecorator("( a:any b:any -- result:bool )", "Greater than", ">")
-    async def greater_than(self, a: Any, b: Any) -> bool:
-        return cast(bool, a > b)
-
-    @WordDecorator("( a:any b:any -- result:bool )", "Less than or equal", "<=")
-    async def less_equal(self, a: Any, b: Any) -> bool:
-        return cast(bool, a <= b)
-
-    @WordDecorator("( a:any b:any -- result:bool )", "Greater than or equal", ">=")
-    async def greater_equal(self, a: Any, b: Any) -> bool:
-        return cast(bool, a >= b)
 
     # ==================
     # Constants (from original implementation)

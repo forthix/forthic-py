@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, unquote
 
 if TYPE_CHECKING:
-    from ...interpreter import Interpreter
+    pass
 
-from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import DecoratedModule, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
 from ...utils import to_forthic_string
 
@@ -28,7 +28,7 @@ class StringModule(DecoratedModule):
 String manipulation and processing operations with regex and URL encoding support.
 
 ## Categories
-- Conversion: >STR, URL_ENCODE, URL_DECODE
+- Conversion: >STR, STR-LENGTH, URL-ENCODE, URL-DECODE
 - Transform: LOWERCASE, UPPERCASE, STRIP, ASCII
 - Split/Join: SPLIT, JOIN, CONCAT
 - Pattern: REPLACE, RE_MATCH, RE_MATCH_ALL, RE_MATCH_GROUP
@@ -40,7 +40,7 @@ String manipulation and processing operations with regex and URL encoding suppor
 "hello world" " " SPLIT
 ["hello" "world"] " " JOIN
 "Hello" LOWERCASE
-"test@example.com" "(@.+)" RE_MATCH 1 RE_MATCH_GROUP
+"test@example.com" "(@.+)" RE-MATCH 1 RE-MATCH-GROUP
             """,
         )
 
@@ -48,20 +48,27 @@ String manipulation and processing operations with regex and URL encoding suppor
     # Concatenation
     # ==================
 
-    @ForthicDirectWord(
-        "( str1:string str2:string -- result:string ) OR ( strings:string[] -- result:string )",
-        "Concatenate two strings or array of strings",
+    @WordDecorator(
+        "( strings:string[] -- result:string )",
+        "Concatenate an array of strings into one string. For two strings: write [s1 s2] CONCAT. For arrays of arrays, use FLATTEN.",
         "CONCAT",
     )
-    async def CONCAT(self, interp: Interpreter) -> None:
-        str2 = interp.stack_pop()
-        if isinstance(str2, list):
-            array = str2
-        else:
-            str1 = interp.stack_pop()
-            array = [str1, str2]
-        result = "".join(str(s) for s in array)
-        interp.stack_push(result)
+    async def CONCAT(self, strings: Any) -> str:
+        if not isinstance(strings, list):
+            raise ValueError("CONCAT requires an array of strings. Wrap two strings as [s1 s2] CONCAT.")
+        return "".join("" if s is None else str(s) for s in strings)
+
+    @WordDecorator(
+        "( str:string -- length:number )",
+        "Length of a string in characters (0 if null).",
+        "STR-LENGTH",
+    )
+    async def STR_LENGTH(self, string: Any) -> int:
+        if string is None:
+            return 0
+        if not isinstance(string, str):
+            raise ValueError("STR-LENGTH requires a string. For arrays/records, use LENGTH.")
+        return len(string)
 
     # ==================
     # Conversion
@@ -158,7 +165,7 @@ String manipulation and processing operations with regex and URL encoding suppor
             result = pattern.sub(replace, string)
         return result
 
-    @WordDecorator("( string:string pattern:string -- match:any )", "Match string against regex pattern")
+    @WordDecorator("( string:string pattern:string -- match:any )", "Match string against regex pattern", "RE-MATCH")
     async def RE_MATCH(self, string: str, pattern: str) -> Any:
         re_pattern = re.compile(pattern)
         result: Any = False
@@ -169,7 +176,7 @@ String manipulation and processing operations with regex and URL encoding suppor
                 result.insert(0, match.group(0))  # Add full match at index 0
         return result
 
-    @WordDecorator("( string:string pattern:string -- matches:any[] )", "Find all regex matches in string")
+    @WordDecorator("( string:string pattern:string -- matches:any[] )", "Find all regex matches in string", "RE-MATCH-ALL")
     async def RE_MATCH_ALL(self, string: str, pattern: str) -> list:
         re_pattern = re.compile(pattern)
         matches: list = []
@@ -177,7 +184,7 @@ String manipulation and processing operations with regex and URL encoding suppor
             matches = [m.group(1) for m in re_pattern.finditer(string)]
         return matches
 
-    @WordDecorator("( match:any num:number -- result:any )", "Get capture group from regex match")
+    @WordDecorator("( match:any num:number -- result:any )", "Get capture group from regex match", "RE-MATCH-GROUP")
     async def RE_MATCH_GROUP(self, match: Any, num: int) -> Any:
         result = None
         if match:
@@ -188,14 +195,14 @@ String manipulation and processing operations with regex and URL encoding suppor
     # URL Encoding
     # ==================
 
-    @WordDecorator("( str:string -- encoded:string )", "URL encode string")
+    @WordDecorator("( str:string -- encoded:string )", "URL encode string", "URL-ENCODE")
     async def URL_ENCODE(self, string: str) -> str:
         result = ""
         if string:
             result = quote(string)
         return result
 
-    @WordDecorator("( urlencoded:string -- decoded:string )", "URL decode string")
+    @WordDecorator("( urlencoded:string -- decoded:string )", "URL decode string", "URL-DECODE")
     async def URL_DECODE(self, urlencoded: str) -> str:
         result = ""
         if urlencoded:

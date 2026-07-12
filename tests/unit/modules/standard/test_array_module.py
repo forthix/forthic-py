@@ -89,9 +89,9 @@ class TestAccessOperations:
         assert interp.stack_pop() == [0, 1, 2]
 
     @pytest.mark.asyncio
-    async def test_drop(self, interp):
-        """Test DROP."""
-        await interp.run("[0 1 2 3 4 5 6] 4 DROP")
+    async def test_skip(self, interp):
+        """Test SKIP."""
+        await interp.run("[0 1 2 3 4 5 6] 4 SKIP")
         assert interp.stack_pop() == [4, 5, 6]
 
 
@@ -181,7 +181,7 @@ class TestTransformOperations:
     @pytest.mark.asyncio
     async def test_reduce(self, interp):
         """Test REDUCE."""
-        await interp.run('[1 2 3 4 5] 10 "ADD" REDUCE')
+        await interp.run('[1 2 3 4 5] 10 "+" REDUCE')
         assert interp.stack_pop() == 25
 
 
@@ -203,8 +203,8 @@ class TestCombineOperations:
 
     @pytest.mark.asyncio
     async def test_zip_with(self, interp):
-        """Test ZIP_WITH."""
-        await interp.run('[10 20] [1 2] "ADD" ZIP_WITH')
+        """Test ZIP-WITH."""
+        await interp.run('[10 20] [1 2] "+" ZIP-WITH')
         array = interp.stack_pop()
         assert array[0] == 11
         assert array[1] == 22
@@ -230,11 +230,11 @@ class TestCombineOperations:
 
     @pytest.mark.asyncio
     async def test_key_of(self, interp):
-        """Test KEY_OF."""
-        await interp.run("['a' 'b' 'c' 'd'] 'c' KEY_OF")
+        """Test KEY-OF."""
+        await interp.run("['a' 'b' 'c' 'd'] 'c' KEY-OF")
         assert interp.stack_pop() == 2
 
-        await interp.run("['a' 'b' 'c' 'd'] 'z' KEY_OF")
+        await interp.run("['a' 'b' 'c' 'd'] 'z' KEY-OF")
         assert interp.stack_pop() is None
 
 
@@ -263,8 +263,8 @@ class TestGroupOperations:
 
     @pytest.mark.asyncio
     async def test_groups_of(self, interp):
-        """Test GROUPS_OF."""
-        await interp.run("[1 2 3 4 5 6 7 8] 3 GROUPS_OF")
+        """Test GROUPS-OF."""
+        await interp.run("[1 2 3 4 5 6 7 8] 3 GROUPS-OF")
         groups = interp.stack_pop()
         assert groups[0] == [1, 2, 3]
         assert groups[1] == [4, 5, 6]
@@ -338,22 +338,21 @@ class TestOptionsSupport:
     async def test_foreach_with_with_key(self, interp):
         """Test FOREACH with options - with_key."""
         await interp.run("""
-            ['result'] VARIABLES
+            ['result' 'k' 'v'] VARIABLES
             "" result !
-            ['a' 'b' 'c'] '>STR CONCAT result @ CONCAT result !' [.with_key TRUE] ~> FOREACH
+            ['a' 'b' 'c'] 'v ! k ! [k @ >STR v @ result @] CONCAT result !' [.with_key TRUE] ~> FOREACH
             result @
         """)
         result = interp.stack_pop()
-        # with_key pushes: index, value -> >STR converts index to string -> CONCAT joins them
-        # CONCAT with result @ puts accumulator first: result + "2c" + "1b" + "0a"
-        # But actually builds as: (("" + "2c") + "1b") + "0a" = "2c1b0a"
+        # with_key pushes: index, value -> each iteration prepends "<index><value>"
+        # onto the accumulator: (("" <- "0a") <- "1b") <- "2c" = "2c1b0a"
         assert result == "2c1b0a"
 
     @pytest.mark.asyncio
     async def test_group_by_with_with_key(self, interp):
-        """Test GROUP_BY with options - with_key."""
+        """Test GROUP-BY with options - with_key."""
         await interp.run("""
-            [5 15 25 8 18] '10 /' [.with_key TRUE] ~> GROUP_BY
+            [5 15 25 8 18] '10 /' [.with_key TRUE] ~> GROUP-BY
         """)
         grouped = interp.stack_pop()
         # with_key pushes: index, value -> 10 / -> groups by division result

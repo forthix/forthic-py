@@ -9,11 +9,11 @@ class TestStackOperations:
     """Test stack manipulation words."""
 
     @pytest.mark.asyncio
-    async def test_pop(self) -> None:
-        """Test POP removes top item."""
+    async def test_drop(self) -> None:
+        """Test DROP removes top item."""
         interp = StandardInterpreter()
 
-        await interp.run("1 2 3 POP")
+        await interp.run("1 2 3 DROP")
         stack = interp.get_stack().get_items()
         assert stack == [1, 2]
 
@@ -89,12 +89,11 @@ class TestControlFlow:
 
     @pytest.mark.asyncio
     async def test_identity(self) -> None:
-        """Test IDENTITY does nothing."""
+        """Tombstone: IDENTITY was dropped (NOP is the no-op)."""
         interp = StandardInterpreter()
 
-        await interp.run("1 2 IDENTITY")
-        stack = interp.get_stack().get_items()
-        assert stack == [1, 2]
+        with pytest.raises(Exception, match="IDENTITY"):
+            await interp.run("1 2 IDENTITY")
 
     @pytest.mark.asyncio
     async def test_nop(self) -> None:

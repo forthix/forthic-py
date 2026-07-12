@@ -38,6 +38,7 @@ class WordMetadata:
     method_name: str
     input_count: int
     has_options: bool
+    has_output: bool
 
 
 @dataclass
@@ -60,17 +61,23 @@ class ModuleMetadata:
     examples: list[str]
 
 
-def parse_stack_notation(stack_effect: str) -> tuple[int, bool]:
-    """Parse Forthic stack notation to extract input count and optional WordOptions.
+def parse_stack_notation(stack_effect: str) -> tuple[int, bool, bool]:
+    """Parse Forthic stack notation: input count, WordOptions, and outputs.
+
+    The stack effect is load-bearing, not just documentation: the input
+    side drives how many values the @ForthicWord wrapper pops, and the
+    output side drives whether the method's return value is pushed —
+    a declared output always pushes (a Python None return is Forthic
+    NULL); no declared output never pushes.
 
     Examples:
-        "( a:any b:any -- sum:number )" → (2, False)
-        "( -- value:any )" → (0, False)
-        "( items:any[] -- first:any )" → (1, False)
-        "( array:any[] [options:WordOptions] -- flat:any[] )" → (1, True)
+        "( a:any b:any -- sum:number )" → (2, False, True)
+        "( -- value:any )" → (0, False, True)
+        "( a:any -- )" → (1, False, False)
+        "( array:any[] [options:WordOptions] -- flat:any[] )" → (1, True, True)
 
     Returns:
-        Tuple of (input_count, has_options)
+        Tuple of (input_count, has_options, has_output)
     """
     trimmed = stack_effect.strip()
     if not (trimmed.startswith("(") and trimmed.endswith(")")):
@@ -82,8 +89,10 @@ def parse_stack_notation(stack_effect: str) -> tuple[int, bool]:
         raise ValueError(f"Invalid stack notation: {stack_effect}")
 
     input_part = parts[0].strip()
+    has_output = parts[1].strip() != ""
+
     if input_part == "":
-        return (0, False)
+        return (0, False, has_output)
 
     # Check for optional [options:WordOptions] parameter
     has_options = bool(re.search(r"\[options:WordOptions\]", input_part))
@@ -94,7 +103,7 @@ def parse_stack_notation(stack_effect: str) -> tuple[int, bool]:
     # Split by whitespace, count non-empty tokens
     inputs = [s for s in without_optional.split() if s]
 
-    return (len(inputs), has_options)
+    return (len(inputs), has_options, has_output)
 
 
 def parse_module_doc_string(doc_string: str) -> ModuleMetadata:
@@ -180,7 +189,7 @@ def ForthicWord(
     """
 
     def decorator(method: Callable) -> Callable:
-        input_count, has_options = parse_stack_notation(stack_effect)
+        input_count, has_options, has_output = parse_stack_notation(stack_effect)
         word_name = custom_word_name or method.__name__
 
         # Store metadata at decoration time by attaching to the method
@@ -191,6 +200,7 @@ def ForthicWord(
             method_name=method.__name__,
             input_count=input_count,
             has_options=has_options,
+            has_output=has_output,
         )
 
         # Replace method with wrapper that handles stack marshalling
@@ -219,9 +229,17 @@ def ForthicWord(
             # Call original method with popped inputs (+ options if present)
             result = await method(self, *inputs)
 
-            # Push result if not None
-            if result is not None:
+            # The declared stack effect drives the push: a declared output
+            # always pushes (a Python None return is Forthic NULL); no
+            # declared output never pushes. A word that lies about its
+            # outputs fails loudly instead of corrupting the stack.
+            if has_output:
                 interp.stack_push(result)
+            elif result is not None:
+                raise ValueError(
+                    f"Word '{word_name}' declares no output in its stack effect "
+                    f"'{stack_effect}' but returned {result!r}"
+                )
 
         # Attach metadata to wrapper for later retrieval
         wrapper._forthic_word_metadata = metadata  # type: ignore
