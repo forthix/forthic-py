@@ -14,9 +14,8 @@ server (which itself reuses the protobuf StackValue tagged-union shape):
     {"plain_date_value": {"iso8601_date": "..."}}
     {"zoned_datetime_value": {"iso8601": "...", "timezone": "..."}}
 
-Note: this is a parallel implementation of forthic.grpc.serializer that
-operates on plain dicts instead of protobuf messages, so the JSON-RPC
-package has no protobuf dependency.
+Operates on plain dicts (no protobuf dependency); the tagged-union shape
+is kept for wire compatibility with the other Forthic runtimes.
 """
 
 from __future__ import annotations
@@ -42,7 +41,7 @@ def serialize_value(value: Any) -> dict[str, Any]:
     if isinstance(value, datetime):
         if value.tzinfo is not None and hasattr(value.tzinfo, "key"):
             iso_str = value.isoformat()
-            tz_name = value.tzinfo.key  # type: ignore[attr-defined]
+            tz_name = value.tzinfo.key
             return {
                 "zoned_datetime_value": {
                     "iso8601": f"{iso_str}[{tz_name}]",

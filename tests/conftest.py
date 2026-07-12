@@ -1,9 +1,8 @@
 """Pytest collection guards for tests that depend on optional packages.
 
-The gRPC tests need the `grpcio` package (plus generated proto files) and
-several integration tests need `pyyaml`. Both are listed as install
-requirements / optional extras in pyproject.toml, but a bare checkout
-without `pip install -e ".[dev]"` will be missing them.
+The module-loader tests need `pyyaml`. It is listed as an install
+requirement in pyproject.toml, but a bare checkout without
+`pip install -e ".[dev]"` may be missing it.
 
 Rather than crash collection with ImportError, skip the affected paths so
 the rest of `pytest` can still run. This file lives in `tests/` so it
@@ -24,18 +23,8 @@ def _has(module: str) -> bool:
 
 # Map: required module -> test files (relative to tests/) that need it.
 _REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "grpc": (
-        "unit/grpc/test_client.py",
-        "unit/grpc/test_remote_module.py",
-        "unit/grpc/test_remote_runtime_module.py",
-        "unit/grpc/test_remote_word.py",
-        "unit/grpc/test_runtime_manager.py",
-        "integration/test_example_module_loading.py",
-        "integration/test_server_config.py",
-        "integration/test_phase11_9_standard_interpreter_integration.py",
-    ),
     "yaml": (
-        "unit/grpc/test_module_loader.py",
+        "unit/jsonrpc/test_module_loader.py",
         "integration/test_example_module_loading.py",
         "integration/test_server_config.py",
     ),

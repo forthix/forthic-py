@@ -1,7 +1,7 @@
 """JSON-RPC 2.0 server for Forthic (Python runtime).
 
-Exposes the same four methods as the gRPC server (executeWord,
-executeSequence, listModules, getModuleInfo) over HTTP POST /rpc.
+Exposes four methods (executeWord, executeSequence, listModules,
+getModuleInfo) over HTTP POST /rpc.
 Uses only Python's standard library (http.server, socketserver) — no
 external HTTP framework required.
 
@@ -24,14 +24,14 @@ from forthic.jsonrpc.errors import JsonRpcErrorCode
 from forthic.jsonrpc.serializer import deserialize_value, serialize_value
 
 
-class _ForthicJsonRpcServicer:
+class JsonRpcServicer:
     """Holds the runtime modules and dispatches the four RPC methods."""
 
     def __init__(self, modules_config: str | None = None) -> None:
         self.runtime_modules: dict[str, Any] = {}
 
         if modules_config:
-            from forthic.grpc.module_loader import (
+            from forthic.jsonrpc.module_loader import (
                 ModuleLoadError,
                 load_modules_from_config,
             )
@@ -159,7 +159,7 @@ class _ForthicJsonRpcServicer:
                 )
                 word_location = f"{filename}:{frame_summary.lineno}"
                 break
-            if "forthic/jsonrpc/" in filename or "forthic/grpc/" in filename:
+            if "forthic/jsonrpc/" in filename:
                 word_location = f"{filename}:{frame_summary.lineno}"
 
         info: dict[str, Any] = {
@@ -223,9 +223,9 @@ class _InvalidParams(_MethodError):
         super().__init__(JsonRpcErrorCode.INVALID_PARAMS, message)
 
 
-def _make_handler(servicer: _ForthicJsonRpcServicer) -> type[BaseHTTPRequestHandler]:
+def _make_handler(servicer: JsonRpcServicer) -> type[BaseHTTPRequestHandler]:
     class _JsonRpcHandler(BaseHTTPRequestHandler):
-        # Quiet logging; keep prints elsewhere consistent with the gRPC server.
+        # Quiet logging; module-loader prints are the server's console output.
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
             return
 
@@ -422,7 +422,7 @@ class JsonRpcHttpServer(ThreadingHTTPServer):
     def __init__(
         self,
         server_address: tuple[str, int],
-        servicer: _ForthicJsonRpcServicer,
+        servicer: JsonRpcServicer,
     ) -> None:
         super().__init__(server_address, _make_handler(servicer))
         self.servicer = servicer
@@ -440,8 +440,8 @@ def serve(
     Args:
         port: TCP port to listen on. Defaults to 8765.
         host: Bind address. Defaults to all interfaces.
-        modules_config: Optional path to a YAML module config (same format
-            as the gRPC server's --modules-config).
+        modules_config: Optional path to a YAML module config (see
+            docs/module-loading.md).
         blocking: If True (default), call serve_forever() and never return.
             If False, start a background thread and return the server so
             callers (e.g. tests) can shut it down.
@@ -449,7 +449,7 @@ def serve(
     Returns:
         The JsonRpcHttpServer instance (only meaningful when blocking=False).
     """
-    servicer = _ForthicJsonRpcServicer(modules_config=modules_config)
+    servicer = JsonRpcServicer(modules_config=modules_config)
     server = JsonRpcHttpServer((host, port), servicer)
 
     loaded = list(servicer.runtime_modules.keys())

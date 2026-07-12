@@ -6,8 +6,8 @@ import socket
 
 import pytest
 
-from forthic.grpc.errors import RemoteRuntimeError
 from forthic.jsonrpc.client import JsonRpcClient
+from forthic.jsonrpc.errors import RemoteRuntimeError
 from forthic.jsonrpc.server import serve
 
 

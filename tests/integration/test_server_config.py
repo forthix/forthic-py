@@ -2,10 +2,11 @@
 Integration tests for server configuration
 """
 import tempfile
-import yaml
 from pathlib import Path
 
-from forthic.grpc.server import ForthicRuntimeServicer
+import yaml
+
+from forthic.jsonrpc.server import JsonRpcServicer
 
 
 class TestServerConfiguration:
@@ -14,7 +15,7 @@ class TestServerConfiguration:
     def test_backward_compatibility_no_config(self):
         """Test that server works without config (backward compatible)"""
         # Create servicer without config
-        servicer = ForthicRuntimeServicer(modules_config=None)
+        servicer = JsonRpcServicer(modules_config=None)
 
         # Should have runtime_modules dict (even if empty)
         assert hasattr(servicer, 'runtime_modules')
@@ -31,7 +32,7 @@ class TestServerConfiguration:
             'modules': [
                 {
                     'name': 'test_module',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleA',
                     'optional': False,
                     'description': 'Test module for server config'
                 }
@@ -44,7 +45,7 @@ class TestServerConfiguration:
 
         try:
             # Create servicer with config
-            servicer = ForthicRuntimeServicer(modules_config=config_path)
+            servicer = JsonRpcServicer(modules_config=config_path)
 
             # Should have loaded the test module
             assert 'test_module' in servicer.runtime_modules
@@ -73,7 +74,7 @@ class TestServerConfiguration:
 
         try:
             # Should not raise - optional module
-            servicer = ForthicRuntimeServicer(modules_config=config_path)
+            servicer = JsonRpcServicer(modules_config=config_path)
 
             # Nonexistent module should not be loaded
             assert 'nonexistent' not in servicer.runtime_modules
@@ -87,12 +88,12 @@ class TestServerConfiguration:
             'modules': [
                 {
                     'name': 'test_a',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleA',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleA',
                     'optional': False
                 },
                 {
                     'name': 'test_b',
-                    'import_path': 'tests.unit.grpc.test_module_loader:FixtureModuleB',
+                    'import_path': 'tests.unit.jsonrpc.test_module_loader:FixtureModuleB',
                     'optional': False
                 }
             ]
@@ -103,7 +104,7 @@ class TestServerConfiguration:
             config_path = f.name
 
         try:
-            servicer = ForthicRuntimeServicer(modules_config=config_path)
+            servicer = JsonRpcServicer(modules_config=config_path)
 
             # Both modules should be loaded
             assert 'test_a' in servicer.runtime_modules
