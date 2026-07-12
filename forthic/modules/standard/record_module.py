@@ -28,7 +28,7 @@ Record (object/dictionary) manipulation operations for working with key-value da
 ## Categories
 - Core: REC, REC@, <REC!, ENTRIES>REC, REC>ENTRIES
 - Transform: RELABEL, INVERT-KEYS, MERGE, PICK, OMIT, DELETE
-- JQ paths: JQ@, JQ!, JQ-DEL
+- JQ paths: JQ@, JQ!, JQ-DEL (use "[].field" JQ@ to map a field over an array of records)
 - Query: HAS-KEY?
 - Access: KEYS, VALUES
             """,

@@ -1,5 +1,13 @@
 # forthic-py Parity Scrub Plan (2026-07-12)
 
+**STATUS: COMPLETE (2026-07-12).** All phases landed (PRs #3–#13). py now
+implements the settled cross-runtime contract: same words, same semantics,
+same wire format as post-scrub forthic-ts and forthic-rs. The scrub also
+pushed two fixes UPSTREAM into forthic-ts (>DATETIME zoned-strings-are-
+instants; the JSON-RPC server's missing Temporal polyfill) and prompted the
+forthic-rs JsonRpcClient. Remaining py-specific follow-ups are listed at the
+bottom of plans/WORD-INVENTORY.md.
+
 Bring forthic-py from its v0.5.0 parity milestone (December 2025) up to the
 settled cross-runtime contract. This mirrors the forthic-rs scrub
 (December 2025 → July 2026, PRs #2–#19), which is the playbook — but the
@@ -224,12 +232,23 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
   DROPPED to match rs (EXPORT, PROFILE-*, SHUFFLE, ROTATE, INFINITY,
   UNIFORM-RANDOM, RE-MATCH-GROUP — 10 words, tombstone-tested). Spec:
   tests/unit/core/test_present_verify.py.
-- **Phase 6 — Wire + capstone.** Cross-runtime smoke (py server driven by
-  the ts client, like rs's `make smoke-ts`; ideally also py↔rs);
-  docstring coverage sweep to match the 177-word documented surface
-  (mechanism exists — decorate everything, wire getModuleInfo if it
-  serves placeholders); README rewrite + version bump (v0.5.0 → v0.6.0,
-  matching the rs convention of versioning by parity milestone).
+- **Phase 6 — Wire + capstone. DONE (2026-07-12, feat/phase6-capstone).**
+  Cross-runtime smoke in both roles: `make smoke-ts` (ts client → py
+  server) and `make smoke-rs` (py client → rs server). The serializer
+  gained the missing `plain_time_value` tag — py could not put a Time on
+  the wire, though ts and rs both had it. forthic-rs grew a
+  JsonRpcClient in the same session, so all four directions are now
+  covered (its `make smoke-ts-server` / `make smoke-py-server` are the
+  mirror). That work immediately caught a real forthic-ts bug: its
+  standalone JSON-RPC server never installed the Temporal polyfill, so
+  every date/time value on the wire threw "Temporal is not defined"
+  (fixed in forthic-ts, with a regression guard in its post-build smoke).
+  Docstring sweep: 168 words compared against ts, 11 descriptions
+  upgraded, 33 stack effects given precise names/types (never shapes —
+  those are load-bearing), 6 module docs de-staled. README rewritten
+  (contract-first, cross-runtime notes, honest divergence list); version
+  bumped v0.5.0 → v0.6.0, matching the rs convention of versioning by
+  parity milestone.
 
 ## Known py-specific watchpoints
 

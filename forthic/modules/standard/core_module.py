@@ -36,23 +36,31 @@ Essential interpreter operations for stack manipulation, variables, control flow
 - Variables: VARIABLES, !, @, !@
 - Module: USE-MODULES
 - Execution: RUN
-- Control: NOP, IF, IF-RUN, WHEN, DEFAULT, DEFAULT-RUN, NULL
+- Control: NOP, DEFAULT, DEFAULT-RUN, NULL, IF, IF-RUN, WHEN
 - Predicates: ARRAY?, NULL?, EMPTY?, STRING?, NUMBER?, RECORD?
+- Errors: TRY, OK?, ERROR?, UNWRAP, UNWRAP-OR (Rust Result semantics: 'CODE' TRY UNWRAP is CODE)
 - Options: ~> (converts array to WordOptions)
 - String: INTERPOLATE, PRINT
 - Debug: PEEK!, STACK!
 
-## Options
+## Interpolation
 INTERPOLATE and PRINT fill ${name} holes (template-literal style; ${.name} also works) from
-variables, read-only. Options via the ~> operator: [.option_name value ...] ~> WORD
+variables. Holes are variable names ONLY — never expressions — so rendering a template can never
+execute Forthic. Lookup is READ-ONLY: a miss renders as null_text and creates nothing. Escape a
+literal with \\${. Compute on the stack, then render: 5 .count ! "Count: ${count}" PRINT
+
+## Options
+INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option_name value ...] ~> WORD
 - separator: String to use when joining array values (default: ", ")
-- null_text: Text to display for null/missing values (default: "")
+- null_text: Text for null values and missing variables (default: "")
 - json: Use JSON formatting for all values (default: false)
 
 ## Examples
 5 .count ! "Count: ${count}" PRINT
+"Items: ${items}" [.separator " | "] ~> PRINT
 [1 2 3] PRINT                           # Direct printing: 1, 2, 3
 [1 2 3] [.separator " | "] ~> PRINT    # With options: 1 | 2 | 3
+[ [.name "Alice"] ] REC [.json TRUE] ~> PRINT  # JSON format: {"name":"Alice"}
 "Hello ${name}" INTERPOLATE .greeting !
 [1 2 3] DUP SWAP
             """,
@@ -126,7 +134,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
     # Variables
     # ==================
 
-    @WordDecorator("( varnames:list -- )", "Creates variables in current module")
+    @WordDecorator("( varnames:string[] -- )", "Creates variables in current module")
     async def VARIABLES(self, varnames: list[str]) -> None:
         assert self._module.interp is not None
         module = self._module.interp.cur_module()
@@ -181,7 +189,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
     # ==================
 
     @ForthicDirectWord(
-        "( forthic:string -- )",
+        "( forthic:string -- ? )",
         "Run a Forthic string in the current context. Whatever the forthic produces is left on the stack.",
         "RUN",
     )
@@ -228,16 +236,16 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
     async def NULL(self, interp: Interpreter) -> None:
         interp.stack_push(None)
 
-    @WordDecorator("( value:any -- boolean:bool )", "Returns true if value is an array", "ARRAY?")
+    @WordDecorator("( value:any -- boolean:boolean )", "Returns true if value is an array", "ARRAY?")
     async def ARRAY_q(self, value: Any) -> bool:
         return isinstance(value, list)
 
-    @WordDecorator("( value:any -- boolean:bool )", "Returns true if value is null", "NULL?")
+    @WordDecorator("( value:any -- boolean:boolean )", "Returns true if value is null", "NULL?")
     async def NULL_q(self, value: Any) -> bool:
         return value is None
 
     @WordDecorator(
-        "( value:any -- boolean:bool )",
+        "( value:any -- boolean:boolean )",
         "Returns true if value is null, an empty string, or a container (array/record) with no entries",
         "EMPTY?",
     )
@@ -248,12 +256,12 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
             return len(value) == 0
         return False
 
-    @WordDecorator("( value:any -- boolean:bool )", "Returns true if value is a string", "STRING?")
+    @WordDecorator("( value:any -- boolean:boolean )", "Returns true if value is a string", "STRING?")
     async def STRING_q(self, value: Any) -> bool:
         return isinstance(value, str)
 
     @WordDecorator(
-        "( value:any -- boolean:bool )",
+        "( value:any -- boolean:boolean )",
         "Returns true if value is a number (Infinity is a number; NaN is not; booleans are not)",
         "NUMBER?",
     )
@@ -265,7 +273,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
         return isinstance(value, int)
 
     @WordDecorator(
-        "( value:any -- boolean:bool )",
+        "( value:any -- boolean:boolean )",
         "Returns true if value is a plain record (not an array, not null)",
         "RECORD?",
     )
@@ -281,7 +289,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
         return then_value if is_truthy(bool_val) else else_value
 
     @ForthicDirectWord(
-        "( bool:boolean then_forthic:string else_forthic:string -- )",
+        "( bool:boolean then_forthic:string else_forthic:string -- ? )",
         "Conditional code execution: if bool is truthy run then_forthic, otherwise run else_forthic. "
         "Branches are Forthic strings; a null/empty branch is a no-op.",
         "IF-RUN",
@@ -296,7 +304,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
             await interp.run(branch, string_location)
 
     @ForthicDirectWord(
-        "( bool:boolean forthic:string -- )",
+        "( bool:boolean forthic:string -- ? )",
         "If bool is truthy run forthic, otherwise do nothing. The forthic argument is always treated as code (executed in current context).",
         "WHEN",
     )
@@ -344,7 +352,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
         "( forthic:string -- outcome:record )",
         'Run forthic, capturing the outcome as data: {"ok": value} on success (value = top of stack '
         "if the run changed the stack; null for no-net-effect code), "
-        '{"error": {message, error_type}} on failure. On failure the stack is restored to its state '
+        '{"error": {message, error_type}} on failure. On failure the stack is restored byte-for-byte to its state '
         "before TRY (transactional for the stack; side effects like variable writes persist), and "
         "modules left open by the failed code are unwound. For error-tolerant mapping use MAP's "
         "outcomes option ([.outcomes TRUE] ~> MAP): TRY inside MAP would transactionally restore "
@@ -419,7 +427,7 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
     # ==================
 
     @WordDecorator(
-        "( array:list -- options:WordOptions )",
+        "( array:any[] -- options:WordOptions )",
         "Convert options array to WordOptions. Format: [.key1 val1 .key2 val2]",
         "~>",
     )

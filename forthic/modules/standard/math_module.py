@@ -28,9 +28,9 @@ class MathModule(DecoratedModule):
 Mathematical operations and utilities including arithmetic, aggregation, and conversions.
 
 ## Categories
-- Arithmetic: +, -, *, /, ADD, SUBTRACT, MULTIPLY, DIVIDE, MOD
-- Aggregates: MEAN, MAX, MIN, SUM
-- Type conversion: >INT, >FLOAT, >FIXED, ROUND
+- Arithmetic: +, -, *, /, MOD, RANGE
+- Aggregates: MEAN, MAX, MIN, SUM, PRODUCT
+- Type conversion: >INT, >FLOAT, FORMAT-FIXED, ROUND
 - Constants (py extensions): PI, E
 - Math functions: ABS, SQRT, FLOOR, CEIL, CLAMP
 

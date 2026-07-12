@@ -48,12 +48,15 @@ Array and collection operations for manipulating arrays and records.
 
 ## Categories
 - Access: NTH, FIRST, LAST, SLICE, TAKE, TAKE-LAST, SKIP, LENGTH, INDEX, KEY-OF
-- Transform: MAP, REVERSE
+- Transform: MAP, MAP-AT, REVERSE
 - Combine: APPEND, ZIP, ZIP-WITH
-- Filter: FILTER, FIND, COUNT, UNIQUE, UNIQUE-BY, DIFFERENCE, INTERSECTION, UNION
-- Sort: SORT, SORT-BY, SORT-U, MIN-BY, MAX-BY
-- Group: BY-FIELD, GROUP-BY-FIELD, GROUP-BY, GROUPS-OF
-- Utility: TIMES-RUN, FOREACH, REDUCE, UNPACK, FLATTEN, NUMBERED, MAP-AT
+- Filter: FILTER, UNIQUE, UNIQUE-BY, DIFFERENCE, INTERSECTION, UNION
+- Sort: SORT, SORT-BY, SORT-U
+- Search: FIND, COUNT
+- Extrema: MIN-BY, MAX-BY
+- Indexing: NUMBERED
+- Group: BY-FIELD, GROUP-BY, GROUP-BY-FIELD, GROUPS-OF
+- Iteration: FOREACH, REDUCE, UNPACK, FLATTEN, TIMES-RUN
 
 ## Options
 Several words support options via the ~> operator using syntax: [.option_name value ...] ~> WORD
@@ -193,7 +196,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
                     result_dict[k] = _container[k]
             return result_dict
 
-    @WordDecorator("( container:any[] n:number [options:WordOptions] -- result:any[] )", "Take first n elements")
+    @WordDecorator("( container:any n:number [options:WordOptions] -- result:any )", "Take first n elements (record in -> record out, insertion order)")
     async def TAKE(self, container: Any, n: int, options: dict[str, Any]) -> Any:
         interp = self._module.interp
         assert interp is not None
@@ -840,7 +843,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @WordDecorator(
         "( container:any[] [options:WordOptions] -- array:any[] )",
-        "Sort container. Options: comparator (string or function)",
+        'Sort container. Options: comparator (string or function). Example: [3 1 4] [.comparator "-1 *"] ~> SORT',
     )
     async def SORT(self, container: list, options: dict[str, Any]) -> list:
         if container is None:
@@ -1076,9 +1079,9 @@ Several words support options via the ~> operator using syntax: [.option_name va
     # ==================
 
     @ForthicDirectWord(
-        "( items:any forthic:string [options:WordOptions] -- )",
+        "( items:any forthic:string [options:WordOptions] -- ? )",
         "Execute forthic for each item. Options: with_key (bool). "
-        "For error tolerance compose with TRY: 'WORD' TRY FOREACH",
+        "For error tolerance compose with TRY: items \"'PROCESS' TRY\" FOREACH",
     )
     async def FOREACH(self, interp: Interpreter) -> None:
         options_dict = {}
@@ -1114,7 +1117,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
                 interp.stack_push(item)
                 await interp.run(forthic, string_location)
 
-    @ForthicDirectWord("( container:list initial:any forthic:str -- result:any )", "Reduce array or record with accumulator")
+    @ForthicDirectWord("( container:any initial:any forthic:string -- result:any )", "Reduce array or record with accumulator")
     async def REDUCE(self, interp: Interpreter) -> None:
         forthic = interp.stack_pop()
         initial = interp.stack_pop()
@@ -1141,7 +1144,8 @@ Several words support options via the ~> operator using syntax: [.option_name va
         interp.stack_push(result)
 
     @WordDecorator(
-        "( container:any [options:WordOptions] -- flat:any )", "Flatten nested arrays or records. Options: depth (number)"
+        "( container:any [options:WordOptions] -- flat:any )",
+        "Flatten nested arrays or records. Options: depth (number). Example: [[[1 2]]] [.depth 1] ~> FLATTEN",
     )
     async def FLATTEN(self, container: Any, options: dict[str, Any]) -> Any:
         if container is None:
