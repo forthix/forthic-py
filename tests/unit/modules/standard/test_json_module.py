@@ -45,7 +45,8 @@ class TestToJSON:
     async def test_with_array(self, interp):
         """Test >JSON with array."""
         await interp.run("[1 2 3 4 5] >JSON")
-        assert interp.stack_pop() == "[1, 2, 3, 4, 5]"
+        # Compact like JSON.stringify — no spaces
+        assert interp.stack_pop() == "[1,2,3,4,5]"
 
     @pytest.mark.asyncio
     async def test_with_string(self, interp):

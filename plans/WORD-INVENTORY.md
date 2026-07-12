@@ -1,6 +1,17 @@
 # Word Inventory: forthic-ts vs forthic-py (2026-07-12)
 
-**STATUS: WORKING PLAN — nothing started. All batches TODO.**
+**STATUS: WORKING PLAN — word batches all TODO. Phase 1 (correctness
+tier) landed first and already resolved several items flagged below:
+ANY empty-items2 → false; >BOOL/OR/AND/NOT/XOR/NAND/SELECT truthiness via
+the new `forthic.utils.is_truthy`; ==/!=/IN/ANY/ALL via `values_equal`
+(bools ≠ numbers, int/float unify, datetime tz-sensitive, structural
+records); the six array_module key-sorting sites (NTH, LAST, SLICE, TAKE,
+DROP, UNPACK) — TAKE/DROP now return records for records; SLICE 10M span
+guard; DIFFERENCE/INTERSECTION rebuilt on the ts set_op contract; >STR
+JS semantics; >JSON compact; crash-proof error formatter;
+IntentionalStop unwrapped; reset() completeness. Correction to this
+inventory: RELABEL's sorted() (array arm) MATCHES ts classic RELABEL —
+not a bug, keep it.**
 
 Full audit of both standard libraries, extracted by runtime enumeration of
 registered words on both sides (StandardInterpreter → registered modules →
@@ -122,7 +133,8 @@ re-litigate; tombstone-test every drop):
 
 **Keep — the 9 no-replacement classics (py has all 9; 3 need the rename):**
 XOR (boolean_module.py:119), NAND (boolean_module.py:123), RELABEL
-(record_module.py:133 — remove the `sorted()` at record_module.py:148),
+(record_module.py:133 — its array-arm `sorted()` matches ts classic
+RELABEL, keep; Phase 1 verified this),
 INVERT-KEYS (record_module.py:157, rename from INVERT_KEYS), DATE>INT
 (datetime_module.py:288), JSON-PRETTIFY (json_module.py:54), /R
 (string_module.py:97), URL-ENCODE (string_module.py:187, rename),
@@ -279,23 +291,20 @@ Words py already registers under the right name whose semantics need
 checking (or outright fixing) against the settled contract:
 
 Known-broken, fix required:
-- **>BOOL** boolean_module.py:173 `bool(a)` — empty containers must be
-  TRUTHY, NaN falsy (Batch 1 is_truthy).
+- **>BOOL** — FIXED (Phase 1): `is_truthy` in forthic/utils.py.
 - **@** core_module.py:146 — must be READ-ONLY; undeclared string name →
   UnknownVariableError; miss creates NOTHING. `!`/`!@` keep get-or-create
-  (core_module.py:138,155 are correct).
-- **Key-sorting sites** (records are insertion-ordered; every `sorted()`
-  on keys is a bug): array_module.py NTH:85, LAST:102, SLICE:150,
-  TAKE:174, DROP(→SKIP):196, UNPACK:359; record_module.py RELABEL:148.
-  (The plan's audit listed three of these; there are seven.)
-- **SLICE** array_module.py:107 — algorithm matches ts (reverse slices,
-  null padding, empty on out-of-range start) but the 10M span bound is
-  MISSING (ts checks after index normalization; same error message).
-- **TAKE** array_module.py:158 — record in must give record out in
-  insertion order (py collapses to a sorted-key values array). push_rest
-  is real in BOTH runtimes — keep it. ts's with_key remains
-  declared-but-dead — do not port it.
-- **OR/AND/ANY** — see collision table (arity + truthiness + empty-set).
+  (core_module.py:138,155 are correct). Still open (Batch/verify).
+- **Key-sorting sites** — FIXED (Phase 1): the six array_module sites
+  (NTH, LAST, SLICE, TAKE, DROP→SKIP, UNPACK) use insertion order;
+  TAKE/DROP return records for records. RELABEL's sorted() stays (array
+  arm, matches ts classic — inventory correction).
+- **SLICE** — FIXED (Phase 1): 10M span guard added (ts message shape).
+- **TAKE** — FIXED (Phase 1): record in → record out, insertion order,
+  push_rest intact. ts's with_key remains declared-but-dead — not ported.
+- **OR/AND** — element tests + two-value selection now use is_truthy
+  (Phase 1); the ARITY change (array operand errors toward ANY?/ALL?)
+  is still Batch 1. **ANY** empty-items2 → false — FIXED (Phase 1).
 
 Verify against ts, expected mostly fine:
 - **MEAN** math_module.py:150 — full polymorphic dispatch is present

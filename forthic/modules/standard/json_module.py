@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
+from ...utils import to_compact_json
 
 
 class JSONModule(DecoratedModule):
@@ -38,9 +39,9 @@ JSON serialization, parsing, and formatting operations.
 
     @WordDecorator("( object:any -- json:string )", "Convert object to JSON string", ">JSON")
     async def to_JSON(self, obj: Any) -> str:
-        if obj is None:
-            return "null"
-        return json.dumps(obj)
+        # Compact like JSON.stringify (no spaces), insertion-ordered keys,
+        # temporal values as their ISO forms
+        return to_compact_json(obj)
 
     @ForthicDirectWord("( json:string -- object:any )", "Parse JSON string to object", "JSON>")
     async def from_JSON(self, interp: Interpreter) -> None:

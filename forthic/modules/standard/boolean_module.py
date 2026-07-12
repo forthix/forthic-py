@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
+from ...utils import is_truthy, values_equal
 
 
 class BooleanModule(DecoratedModule):
@@ -44,11 +45,11 @@ Comparison, logic, and membership operations for boolean values and conditions.
 
     @WordDecorator("( a:any b:any -- equal:boolean )", "Test equality", "==")
     async def equals(self, a: Any, b: Any) -> bool:
-        return cast(bool, a == b)
+        return values_equal(a, b)
 
     @WordDecorator("( a:any b:any -- not_equal:boolean )", "Test inequality", "!=")
     async def not_equals(self, a: Any, b: Any) -> bool:
-        return cast(bool, a != b)
+        return not values_equal(a, b)
 
     @WordDecorator("( a:any b:any -- less_than:boolean )", "Less than", "<")
     async def less_than(self, a: Any, b: Any) -> bool:
@@ -81,15 +82,15 @@ Comparison, logic, and membership operations for boolean values and conditions.
         # Case 1: Array on top of stack
         if isinstance(b, list):
             for val in b:
-                if val:
+                if is_truthy(val):
                     interp.stack_push(True)
                     return
             interp.stack_push(False)
             return
 
-        # Case 2: Two values
+        # Case 2: Two values (JS ||: first operand if truthy, else second)
         a = interp.stack_pop()
-        interp.stack_push(a or b)
+        interp.stack_push(a if is_truthy(a) else b)
 
     @ForthicDirectWord(
         "( a:boolean b:boolean -- result:boolean ) OR ( bools:boolean[] -- result:boolean )",
@@ -102,27 +103,27 @@ Comparison, logic, and membership operations for boolean values and conditions.
         # Case 1: Array on top of stack
         if isinstance(b, list):
             for val in b:
-                if not val:
+                if not is_truthy(val):
                     interp.stack_push(False)
                     return
             interp.stack_push(True)
             return
 
-        # Case 2: Two values
+        # Case 2: Two values (JS &&: first operand if falsy, else second)
         a = interp.stack_pop()
-        interp.stack_push(a and b)
+        interp.stack_push(b if is_truthy(a) else a)
 
     @WordDecorator("( bool:boolean -- result:boolean )", "Logical NOT")
     async def NOT(self, bool_val: Any) -> bool:
-        return not bool_val
+        return not is_truthy(bool_val)
 
     @WordDecorator("( a:boolean b:boolean -- result:boolean )", "Logical XOR (exclusive or)")
     async def XOR(self, a: Any, b: Any) -> bool:
-        return (a or b) and not (a and b)
+        return is_truthy(a) != is_truthy(b)
 
     @WordDecorator("( a:boolean b:boolean -- result:boolean )", "Logical NAND (not and)")
     async def NAND(self, a: Any, b: Any) -> bool:
-        return not (a and b)
+        return not (is_truthy(a) and is_truthy(b))
 
     # ==================
     # Membership
@@ -132,20 +133,20 @@ Comparison, logic, and membership operations for boolean values and conditions.
     async def IN(self, item: Any, array: Any) -> bool:
         if not isinstance(array, list):
             return False
-        return item in array
+        return any(values_equal(item, element) for element in array)
 
     @WordDecorator("( items1:any[] items2:any[] -- any:boolean )", "Check if any item from items1 is in items2")
     async def ANY(self, items1: Any, items2: Any) -> bool:
         if not isinstance(items1, list) or not isinstance(items2, list):
             return False
 
-        # If items2 is empty, return true (any items from items1 satisfy empty constraint)
+        # Nothing can match against an empty set (ts #31)
         if len(items2) == 0:
-            return True
+            return False
 
         # Check if any item from items1 is in items2
         for item in items1:
-            if item in items2:
+            if any(values_equal(item, element) for element in items2):
                 return True
         return False
 
@@ -154,13 +155,13 @@ Comparison, logic, and membership operations for boolean values and conditions.
         if not isinstance(items1, list) or not isinstance(items2, list):
             return False
 
-        # If items2 is empty, return true (all zero items are in items1)
+        # Vacuously true: all zero items are in items1 (matches ts)
         if len(items2) == 0:
             return True
 
         # Check if all items from items2 are in items1
         for item in items2:
-            if item not in items1:
+            if not any(values_equal(item, element) for element in items1):
                 return False
         return True
 
@@ -168,6 +169,6 @@ Comparison, logic, and membership operations for boolean values and conditions.
     # Conversion
     # ==================
 
-    @WordDecorator("( a:any -- bool:boolean )", "Convert to boolean (Python truthiness)", ">BOOL")
+    @WordDecorator("( a:any -- bool:boolean )", "Convert to boolean (JS truthiness: empty containers truthy, NaN falsy)", ">BOOL")
     async def to_BOOL(self, a: Any) -> bool:
-        return bool(a)
+        return is_truthy(a)

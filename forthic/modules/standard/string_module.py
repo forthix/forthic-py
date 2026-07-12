@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
+from ...utils import to_forthic_string
 
 
 class StringModule(DecoratedModule):
@@ -66,9 +67,13 @@ String manipulation and processing operations with regex and URL encoding suppor
     # Conversion
     # ==================
 
-    @WordDecorator("( item:any -- string:string )", "Convert item to string", ">STR")
+    @WordDecorator(
+        "( item:any -- string:string )",
+        "Convert item to string (JS semantics: null -> '', arrays comma-join, records -> compact JSON)",
+        ">STR",
+    )
     async def to_STR(self, item: Any) -> str:
-        return str(item)
+        return to_forthic_string(item)
 
     # ==================
     # Split/Join

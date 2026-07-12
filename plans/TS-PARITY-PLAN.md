@@ -109,11 +109,24 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
   module_loader + Remote*Error moved into forthic.jsonrpc, servicer made
   public (JsonRpcServicer), grpc extra/script/Makefile targets deleted.
   Dev env moved to uv (uv venv/.venv; uv.lock not committed).
-- **Phase 1 — Correctness tier.** is_truthy sweep (audit item 1); remove
-  key-sorting (item 2); >STR/stringification contract (records → compact
-  JSON, None → ""); values-equal semantics for temporal/record types;
-  error-formatter crash-proofing; reset() completeness. Port the rs
-  tier1/tier2 test files as the spec.
+- **Phase 1 — Correctness tier. DONE (2026-07-12).** is_truthy +
+  values_equal + to_forthic_string/to_compact_json live in
+  forthic/utils.py. Swept >BOOL, OR/AND (element tests + JS ||/&&
+  selection), NOT/XOR/NAND, SELECT predicate; ==/!=/IN/ANY/ALL use
+  values_equal (bools ≠ numbers, int/float unify, datetimes tz-sensitive
+  like ts ISO comparison, structural records); ANY empty-items2 → false.
+  Removed the six array_module key-sorting sites (RELABEL's sorted()
+  turned out to MATCH ts classic — kept); TAKE/DROP return records for
+  records; SLICE gained the 10M span guard; UNPACK insertion order;
+  DIFFERENCE/INTERSECTION rebuilt on ts's set_op contract (record left =
+  PICK/OMIT, array-left-record-right tests against values). >STR does JS
+  semantics (None → "", records → compact JSON); >JSON compact like
+  JSON.stringify. Error formatter crash-proofed (caret math clamped);
+  IntentionalStopError passes through definitions unwrapped; reset()
+  clears tokenizer stack + previous token. Specs ported to
+  tests/unit/core/test_tier1_correctness.py + test_tier2_record_semantics.py
+  (TAKE-LAST/DELETE/FIRST assertions deferred to their batches).
+  RELABEL/<DEL's `if not container` guards left for their batch work.
 - **Phase 2 — Error handling.** TRY family (TRY, OK?, ERROR?, UNWRAP,
   UNWRAP-OR) with transactional stack + module unwinding; remove
   push_error; MAP `.outcomes`. The rs try_word_test.rs pins the laws.

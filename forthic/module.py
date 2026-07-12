@@ -137,11 +137,15 @@ class DefinitionWord(Word):
         self.words.append(word)
 
     async def execute(self, interp: Interpreter) -> None:
-        from .errors import WordExecutionError
+        from .errors import IntentionalStopError, WordExecutionError
 
         for word in self.words:
             try:
                 await word.execute(interp)
+            except IntentionalStopError:
+                # PEEK!/STACK! stops keep their identity and message instead
+                # of being wrapped at every definition layer (ts #26)
+                raise
             except Exception as e:
                 tokenizer = interp.get_tokenizer()
                 raise WordExecutionError(
