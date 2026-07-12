@@ -207,8 +207,11 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
   contract fixes (is_truthy input check — empty records now pass through
   as-is; first-seen key order for field-wise means). >DATETIME breadth
   verified + one fix: trailing-Z/offset strings are INSTANTS resolved
-  into the interpreter tz (astimezone; consistent with >DATE #35;
-  sanctioned divergence from ts), plus an explicit Date→midnight arm.
+  into the interpreter tz (astimezone; consistent with >DATE #35).
+  Originally a sanctioned divergence from ts; the owner opted to fix ts
+  instead — forthic-ts fix/datetime-zoned-strings-are-instants aligns
+  all three runtimes (divergence retired once it merges). Plus an
+  explicit Date→midnight arm.
   AT / >TIMESTAMP / TIMESTAMP>DATETIME verified matching. OR/AND arity
   verified (Batch 1; py keeps ts's raw-operand return — rs's Bool
   coercion is rs-only). Stray `}` now raises ModuleStackUnderflowError

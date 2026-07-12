@@ -72,9 +72,11 @@ async def test_to_datetime_strings_are_wall_clocks_in_interpreter_tz():
 
 @pytest.mark.asyncio
 async def test_to_datetime_zoned_strings_are_instants():
-    # Sanctioned divergence: ts nulls Z-strings and reinterprets offset
-    # wall-clocks; the contract reads both as the instants they denote,
-    # resolved into the interpreter tz (consistent with >DATE's #35 rule)
+    # Zone-carrying strings are the instants they denote, resolved into
+    # the interpreter tz (consistent with >DATE's #35 rule). ts originally
+    # nulled Z-strings and reinterpreted offset wall-clocks (Temporal
+    # accidents); a fix aligning ts to this contract is in flight
+    # (forthic-ts fix/datetime-zoned-strings-are-instants)
     result = await run("'2024-01-15T23:30:00Z' >DATETIME", timezone="Asia/Tokyo")
     assert (result.year, result.month, result.day, result.hour) == (
         2024, 1, 16, 8,

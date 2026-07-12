@@ -295,8 +295,8 @@ TODAY 7 ADD-DAYS
             else:
                 # Trailing-Z / explicit-offset strings denote INSTANTS:
                 # resolve them into the interpreter timezone (consistent
-                # with >DATE's #35 rule; sanctioned divergence from ts,
-                # which nulls Z-strings and reinterprets offset wall-clocks)
+                # with >DATE's #35 rule; cross-runtime contract — a ts fix
+                # aligning its old Temporal-accident behavior is in flight)
                 dt = dt.astimezone(tz)
             interp.stack_push(dt)
         except (ValueError, TypeError):
