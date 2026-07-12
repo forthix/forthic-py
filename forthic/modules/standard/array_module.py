@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
-from ...utils import is_truthy, values_equal
+from ...utils import is_truthy, run_to_outcome, values_equal
 
 # Generous ceiling on how many elements a single word may materialize from
 # caller-supplied sizes (SLICE, RANGE). Fails fast instead of OOMing the host.
@@ -42,9 +42,9 @@ Array and collection operations for manipulating arrays and records.
 ## Options
 Several words support options via the ~> operator using syntax: [.option_name value ...] ~> WORD
 - with_key: Push index/key before value (MAP, FOREACH, GROUP_BY, SELECT)
-- push_error: Push error array after execution (MAP, FOREACH)
 - depth: Recursion depth for nested operations (MAP, FLATTEN)
-- push_rest: Push remaining items after operation (MAP, TAKE)
+- outcomes: Map each element to {ok: value} / {error: info} (MAP)
+- push_rest: Push remaining items after operation (TAKE)
 - comparator: Custom comparison function as Forthic string (SORT)
 
 ## Examples
@@ -52,7 +52,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 [10 20 30] '+ 2 *' [.with_key TRUE] ~> MAP
 [[[1 2]] [[3 4]]] [.depth 1] ~> FLATTEN
 [3 1 4 1 5] [.comparator "-1 *"] ~> SORT
-[.with_key TRUE .push_error TRUE] ~> MAP
+[1 2 3] '2 *' [.outcomes TRUE] ~> MAP
             """,
         )
 
@@ -240,7 +240,10 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @ForthicDirectWord(
         "( items:any forthic:string [options:WordOptions] -- mapped:any )",
-        "Map function over items. Options: with_key (bool), push_error (bool), depth (num), push_rest (bool)",
+        "Map function over items. Options: with_key (bool), depth (num), outcomes (bool). "
+        "With outcomes, each element maps to {ok: value} or {error: {message, error_type}} — "
+        "per-element failures don't abort and can't disturb the stack (MAP restores its own "
+        "pushes). Example: [1 2 3] '2 *' [.outcomes TRUE] ~> MAP",
     )
     async def MAP(self, interp: Interpreter) -> None:
         options_dict = {}
@@ -257,9 +260,8 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         flags = {
             "with_key": options_dict.get("with_key", False),
-            "push_error": options_dict.get("push_error", False),
             "depth": options_dict.get("depth", 0),
-            "push_rest": options_dict.get("push_rest", False),
+            "outcomes": options_dict.get("outcomes", False),
         }
 
         string_location = interp.get_string_location()
@@ -268,73 +270,73 @@ Several words support options via the ~> operator using syntax: [.option_name va
             interp.stack_push(items)
             return
 
-        result_data = await self._map_items(interp, items, forthic, string_location, flags)
-        result = result_data[0]
-        errors = result_data[1]
-
+        result = await self._map_items(interp, items, forthic, string_location, flags)
         interp.stack_push(result)
-        if flags["push_error"]:
-            interp.stack_push(errors)
 
     async def _map_items(
         self, interp: Interpreter, items: Any, forthic: str, forthic_location: Any, flags: dict
-    ) -> tuple[Any, list]:
+    ) -> Any:
         """Map forthic over items with optional recursion depth."""
 
-        async def map_value(key: str | int, value: Any, errors: list) -> Any:
+        async def map_value(key: str | int, value: Any) -> Any:
+            # Errors propagate (Forthic's default) unless outcomes mode is
+            # on, in which case each element maps to {ok: value} /
+            # {error: info}. The snapshot is taken BEFORE the item is pushed
+            # — MAP owns that push, so a failed element consumes the item
+            # and cannot strand it (this is why outcomes lives on MAP rather
+            # than being composed from TRY, whose snapshot would include the
+            # pushed item and faithfully restore it).
+            if not flags["outcomes"]:
+                if flags["with_key"]:
+                    interp.stack_push(key)
+                interp.stack_push(value)
+                await interp.run(forthic, forthic_location)
+                return interp.stack_pop()
+
+            snapshot = list(interp.get_stack().get_raw_items())
+            module_depth = interp.module_stack_depth()
             if flags["with_key"]:
                 interp.stack_push(key)
             interp.stack_push(value)
+            return await run_to_outcome(
+                interp, forthic, forthic_location, snapshot, module_depth
+            )
 
-            if flags["push_error"]:
-                error = None
-                try:
-                    await interp.run(forthic, forthic_location)
-                except Exception as e:
-                    interp.stack_push(None)
-                    error = e
-                errors.append(error)
-            else:
-                await interp.run(forthic, forthic_location)
-
-            return interp.stack_pop()
-
-        async def descend_record(record: dict, depth: int, accum: dict, errors: list) -> dict:
+        async def descend_record(record: dict, depth: int, accum: dict) -> dict:
             for k in record.keys():
                 item = record[k]
-                if depth > 0:
-                    if isinstance(item, list):
-                        accum[k] = []
-                        await descend_list(item, depth - 1, accum[k], errors)
-                    else:
-                        accum[k] = {}
-                        await descend_record(item, depth - 1, accum[k], errors)
+                if depth > 0 and isinstance(item, list):
+                    accum[k] = []
+                    await descend_list(item, depth - 1, accum[k])
+                elif depth > 0 and isinstance(item, dict):
+                    accum[k] = {}
+                    await descend_record(item, depth - 1, accum[k])
                 else:
-                    accum[k] = await map_value(k, item, errors)
+                    # Scalar leaf (or depth exhausted): map it
+                    accum[k] = await map_value(k, item)
             return accum
 
-        async def descend_list(items_list: list, depth: int, accum: list, errors: list) -> list:
+        async def descend_list(items_list: list, depth: int, accum: list) -> list:
             for i, item in enumerate(items_list):
-                if depth > 0:
-                    if isinstance(item, list):
-                        accum.append([])
-                        await descend_list(item, depth - 1, accum[-1], errors)
-                    else:
-                        accum.append({})
-                        await descend_record(item, depth - 1, accum[-1], errors)
+                if depth > 0 and isinstance(item, list):
+                    accum.append([])
+                    await descend_list(item, depth - 1, accum[-1])
+                elif depth > 0 and isinstance(item, dict):
+                    accum.append({})
+                    await descend_record(item, depth - 1, accum[-1])
                 else:
-                    accum.append(await map_value(i, item, errors))
+                    # Scalar leaf (or depth exhausted): map it
+                    accum.append(await map_value(i, item))
             return accum
 
-        errors: list = []
         depth = flags["depth"]
 
         if isinstance(items, list):
-            result: list | dict = await descend_list(items, depth, [], errors)
+            result: list | dict = await descend_list(items, depth, [])
         else:
-            result = await descend_record(items, depth, {}, errors)
+            result = await descend_record(items, depth, {})
 
-        return (result, errors)
+        return result
 
     @WordDecorator("( container:any -- container:any )", "Reverse array")
     async def REVERSE(self, container: Any) -> Any:
@@ -825,7 +827,8 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @ForthicDirectWord(
         "( items:any forthic:string [options:WordOptions] -- )",
-        "Execute forthic for each item. Options: with_key (bool), push_error (bool)",
+        "Execute forthic for each item. Options: with_key (bool). "
+        "For error tolerance compose with TRY: 'WORD' TRY FOREACH",
     )
     async def FOREACH(self, interp: Interpreter) -> None:
         options_dict = {}
@@ -845,46 +848,21 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         string_location = interp.get_string_location()
 
-        flags = {
-            "with_key": options_dict.get("with_key"),
-            "push_error": options_dict.get("push_error"),
-        }
-
-        errors: list = []
-
-        async def execute_with_error(forthic_str: str, location: Any) -> Any:
-            try:
-                await interp.run(forthic_str, location)
-                return None
-            except Exception as error:
-                return error
+        with_key = options_dict.get("with_key")
 
         if isinstance(items, list):
             for i, item in enumerate(items):
-                if flags["with_key"]:
+                if with_key:
                     interp.stack_push(i)
                 interp.stack_push(item)
-
-                if flags["push_error"]:
-                    error = await execute_with_error(forthic, string_location)
-                    errors.append(error)
-                else:
-                    await interp.run(forthic, string_location)
+                await interp.run(forthic, string_location)
         else:
             for k in items.keys():
                 item = items[k]
-                if flags["with_key"]:
+                if with_key:
                     interp.stack_push(k)
                 interp.stack_push(item)
-
-                if flags["push_error"]:
-                    error = await execute_with_error(forthic, string_location)
-                    errors.append(error)
-                else:
-                    await interp.run(forthic, string_location)
-
-        if flags["push_error"]:
-            interp.stack_push(errors)
+                await interp.run(forthic, string_location)
 
     @ForthicDirectWord("( container:list initial:any forthic:str -- result:any )", "Reduce array or record with accumulator")
     async def REDUCE(self, interp: Interpreter) -> None:

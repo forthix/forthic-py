@@ -16,6 +16,7 @@ from ...decorators import DecoratedModule, ForthicDirectWord, register_module_do
 from ...decorators import ForthicWord as WordDecorator
 from ...errors import IntentionalStopError, InvalidVariableNameError
 from ...module import Variable
+from ...utils import run_to_outcome
 from ...word_options import WordOptions
 
 
@@ -235,6 +236,89 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
             # Result is already on stack from run()
         else:
             interp.stack_push(value)
+
+    # ==================
+    # TRY: error handling as data (Rust Result semantics)
+    #
+    # Forthic's default error behavior is already Rust's `?` — errors
+    # auto-propagate up run(). TRY is the other half of the Result model:
+    # holding an error as a value. Law: 'CODE' TRY UNWRAP ≡ CODE.
+    # Mirrored in forthic-ts / forthic-rs.
+    # ==================
+
+    @ForthicDirectWord(
+        "( forthic:string -- outcome:record )",
+        'Run forthic, capturing the outcome as data: {"ok": value} on success (value = top of stack '
+        "if the run changed the stack; null for no-net-effect code), "
+        '{"error": {message, error_type}} on failure. On failure the stack is restored to its state '
+        "before TRY (transactional for the stack; side effects like variable writes persist), and "
+        "modules left open by the failed code are unwound. For error-tolerant mapping use MAP's "
+        "outcomes option ([.outcomes TRUE] ~> MAP): TRY inside MAP would transactionally restore "
+        "the item MAP pushed, stranding it beneath the outcome.",
+        "TRY",
+    )
+    async def TRY(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        string_location = interp.get_string_location()
+        snapshot = list(interp.get_stack().get_raw_items())
+        module_depth = interp.module_stack_depth()
+        outcome = await run_to_outcome(interp, forthic, string_location, snapshot, module_depth)
+        interp.stack_push(outcome)
+
+    @WordDecorator(
+        "( outcome:record -- boolean:boolean )",
+        "True if outcome is an ok record (structural: has an 'ok' key)",
+        "OK?",
+    )
+    async def OK_q(self, outcome: Any) -> bool:
+        return isinstance(outcome, dict) and "ok" in outcome
+
+    @WordDecorator(
+        "( outcome:record -- boolean:boolean )",
+        "True if outcome is an error record (structural: has an 'error' key)",
+        "ERROR?",
+    )
+    async def ERROR_q(self, outcome: Any) -> bool:
+        return isinstance(outcome, dict) and "error" in outcome
+
+    # UNWRAP/UNWRAP-OR are direct words: an ok payload can legitimately be
+    # NULL, and the @ForthicWord decorator skips pushing None returns
+    @ForthicDirectWord(
+        "( outcome:record -- value:any )",
+        "Extract the ok value from a TRY outcome; re-raises for an error outcome (preserving "
+        "message and error_type). 'CODE' TRY UNWRAP ≡ CODE.",
+        "UNWRAP",
+    )
+    async def UNWRAP(self, interp: Interpreter) -> None:
+        outcome = interp.stack_pop()
+        if isinstance(outcome, dict):
+            if "ok" in outcome:
+                interp.stack_push(outcome["ok"])
+                return
+            if "error" in outcome:
+                info = outcome["error"] if isinstance(outcome["error"], dict) else {}
+                message = info.get("message") or "UNWRAP of error outcome"
+                error_type = info.get("error_type")
+                type_suffix = f" ({error_type})" if error_type else ""
+                raise RuntimeError(f"{message}{type_suffix}")
+        raise RuntimeError("UNWRAP requires a TRY outcome record with an 'ok' or 'error' key")
+
+    @ForthicDirectWord(
+        "( outcome:record default:any -- value:any )",
+        "Extract the ok value from a TRY outcome, or default if it is an error outcome",
+        "UNWRAP-OR",
+    )
+    async def UNWRAP_OR(self, interp: Interpreter) -> None:
+        default_value = interp.stack_pop()
+        outcome = interp.stack_pop()
+        if isinstance(outcome, dict):
+            if "ok" in outcome:
+                interp.stack_push(outcome["ok"])
+                return
+            if "error" in outcome:
+                interp.stack_push(default_value)
+                return
+        raise RuntimeError("UNWRAP-OR requires a TRY outcome record with an 'ok' or 'error' key")
 
     # ==================
     # WordOptions
