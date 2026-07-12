@@ -59,6 +59,45 @@ def values_equal(a: Any, b: Any) -> bool:
     return bool(a == b)
 
 
+def _same_stack_item(a: Any, b: Any) -> bool:
+    """Element comparison for TRY's unchanged-stack check (ts uses ===):
+    identity for objects, value equality for same-type primitives."""
+    if a is b:
+        return True
+    return type(a) is type(b) and isinstance(a, (int, float, str)) and a == b
+
+
+async def run_to_outcome(
+    interp: Any, forthic: str, location: Any, snapshot: list[Any], module_depth: int
+) -> dict[str, Any]:
+    """Run forthic and capture the result as a TRY outcome record.
+
+    Shared by TRY and MAP's outcomes option — the caller chooses the
+    snapshot moment (TRY: before anything; MAP: BEFORE pushing the item, so
+    a failed element consumes the item and cannot strand it).
+
+    Success: {"ok": payload} where payload is the top of stack if the run
+    changed the stack relative to the snapshot (a no-net-effect run yields
+    ok: None). Failure: the stack is restored to the snapshot, modules left
+    open by the failed code are unwound, and the outcome is
+    {"error": {"message", "error_type"}}.
+    """
+    try:
+        await interp.run(forthic, location)
+    except Exception as e:
+        interp.get_stack().set_raw_items(list(snapshot))
+        while interp.module_stack_depth() > module_depth:
+            interp.module_stack_pop()
+        return {"error": {"message": str(e), "error_type": type(e).__name__}}
+
+    after = interp.get_stack().get_raw_items()
+    unchanged = len(after) == len(snapshot) and all(
+        _same_stack_item(x, y) for x, y in zip(after, snapshot, strict=True)
+    )
+    payload = interp.stack_pop() if not unchanged and len(after) > 0 else None
+    return {"ok": payload}
+
+
 def _jsonable(value: Any) -> Any:
     """Convert a Forthic value to something json.dumps renders per the contract."""
     if isinstance(value, bool) or value is None:

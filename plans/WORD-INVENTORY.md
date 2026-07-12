@@ -162,12 +162,20 @@ exclude from the portable-core count.
   (record_module.py:94-100) and the implementation is the injection shape
   in person: it json.dumps the field into a Forthic string and runs
   `'<field> REC@' MAP`. REMOVE + tombstone test.
-- **push_error** — removed from the contract (ts #38 → TRY / MAP
-  `.outcomes`). py removal sites: array_module.py MAP (lines 228, 245,
-  261, 274) and FOREACH (lines 825, 847, 865-883), module doc lines 40/50,
-  word_options.py:25 (docstring example). Goes with Phase 2's TRY arrival.
-  py MAP's `push_rest` flag is declared-but-dead (read at line 247, never
-  used) — delete alongside.
+- **push_error** — REMOVED (Phase 2, with TRY's arrival): gone from MAP,
+  FOREACH, module docs, and the word_options docstring; MAP's dead
+  push_rest deleted alongside. MAP gained `.outcomes`; TRY / OK? /
+  ERROR? / UNWRAP / UNWRAP-OR live in core (test_try_word.py pins the
+  laws).
+- **@ForthicWord None-return gap (Phase 2 finding, infrastructure
+  decision needed):** the decorator only pushes non-None results, so a
+  decorated word whose value is legitimately NULL pushes NOTHING —
+  `NULL REVERSE`, `[] LAST`, `NULL DEFAULT`-style pass-throughs all
+  strand the stack today. ts distinguishes undefined (no push) from null
+  (push). Options: a NO_PUSH sentinel (decorated words that return
+  nothing switch to it) or converting null-returning words to direct
+  words (what UNWRAP/UNWRAP-OR do). Decide before the Batch 1/2 words
+  (NULL?, FIND, MIN-BY/MAX-BY return null routinely).
 - **UNDEFINED** — ts-only documented host-interop word (serializes as null
   on the wire). py never implements it; UnknownWord is the honest
   non-portability signal; portable programs use NULL.

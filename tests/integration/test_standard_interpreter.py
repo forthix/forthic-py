@@ -699,8 +699,8 @@ class TestAdvancedMapAndIteration:
         assert array == [[[4, 6]], [[6, 8]]]
 
     @pytest.mark.asyncio
-    async def test_map_depth_with_error(self) -> None:
-        """Test MAP depth with error handling."""
+    async def test_map_depth_with_outcomes(self) -> None:
+        """Test MAP depth with outcomes mode (replaced push_error)."""
         interp = StandardInterpreter()
         await interp.run("""
             : k1-REC   [
@@ -718,19 +718,16 @@ class TestAdvancedMapAndIteration:
               ["k2"  k2-REC]
             ] REC;
 
-            DEEP-RECORD ">STR INTERPRET" [.depth 2 .push_error TRUE] ~> MAP
+            DEEP-RECORD ">STR INTERPRET" [.depth 2 .outcomes TRUE] ~> MAP
         """)
-        errors = interp.stack_pop()
         record = interp.stack_pop()
 
-        assert record == {
-            "k1": {"l1": {"m": 2}, "l2": {"m": 3}},
-            "k2": {"l1": {"m": None}, "l2": {"m": 4}},
-        }
-        assert errors[0] is None
-        assert errors[1] is None
-        assert errors[2] is not None
-        assert errors[3] is None
+        assert record["k1"] == {"l1": {"m": {"ok": 2}}, "l2": {"m": {"ok": 3}}}
+        assert record["k2"]["l2"] == {"m": {"ok": 4}}
+        # The garbage leaf yields an error outcome without aborting the map
+        assert "error" in record["k2"]["l1"]["m"]
+        # And nothing is stranded on the stack
+        assert len(interp.get_stack()) == 0
 
     @pytest.mark.asyncio
     async def test_map_with_key(self) -> None:
@@ -778,19 +775,16 @@ class TestAdvancedMapAndIteration:
         assert sum_val == 25
 
     @pytest.mark.asyncio
-    async def test_foreach_to_errors(self) -> None:
-        """Test FOREACH with error handling."""
+    async def test_foreach_error_tolerance_via_try(self) -> None:
+        """FOREACH error tolerance is composed with TRY (push_error removed)."""
         interp = StandardInterpreter()
         await interp.run("""
-            ['2' '3' 'GARBAGE' '+'] 'INTERPRET' [.push_error TRUE] ~> FOREACH
+            [ '5' 'GARBAGE' ] 'TRY' FOREACH
         """)
-        errors = interp.stack_pop()
-        assert errors[0] is None
-        assert errors[1] is None
-        assert errors[2] is not None
-        assert errors[3] is None
-        res = interp.stack_pop()
-        assert res == 5
+        bad = interp.stack_pop()
+        good = interp.stack_pop()
+        assert good == {"ok": 5}
+        assert "error" in bad
 
 
 class TestGroupingAndRelabeling:

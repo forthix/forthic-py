@@ -22,7 +22,6 @@ Words declare options support by adding an options parameter with type dict[str,
     @Word("( items:any[] forthic:string [options:WordOptions] -- result:any )")
     async def MAP(self, items: list, forthic: str, options: dict[str, Any]) -> list:
         with_key = options.get('with_key')
-        push_error = options.get('push_error')
         # ... use options to modify behavior
 
 The @Word decorator automatically:

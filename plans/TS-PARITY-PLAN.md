@@ -127,9 +127,22 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
   tests/unit/core/test_tier1_correctness.py + test_tier2_record_semantics.py
   (TAKE-LAST/DELETE/FIRST assertions deferred to their batches).
   RELABEL/<DEL's `if not container` guards left for their batch work.
-- **Phase 2 — Error handling.** TRY family (TRY, OK?, ERROR?, UNWRAP,
-  UNWRAP-OR) with transactional stack + module unwinding; remove
-  push_error; MAP `.outcomes`. The rs try_word_test.rs pins the laws.
+- **Phase 2 — Error handling. DONE (2026-07-12).** TRY, OK?, ERROR?,
+  UNWRAP, UNWRAP-OR in core (transactional stack via raw-items snapshot,
+  module-stack unwinding, ts payload rule: top-of-stack if the run
+  changed the stack, ok:null for no-net-effect). Shared
+  `run_to_outcome` in forthic/utils.py powers both TRY and MAP's
+  `.outcomes` option (snapshot BEFORE the item push). push_error removed
+  from MAP and FOREACH (composition is `'W' TRY FOREACH`); MAP's dead
+  push_rest deleted; MAP's depth descent fixed to map scalar leaves like
+  ts (it used to crash descending them as records). rs try_word_test.rs
+  ported to tests/unit/core/test_try_word.py (19 tests).
+  **Two py findings for later phases:** (1) the @ForthicWord decorator
+  never pushes None returns, so any decorated word whose result is
+  legitimately NULL strands the stack (`NULL REVERSE`, `[] LAST`, ...) —
+  UNWRAP/UNWRAP-OR sidestep it as direct words; needs an infrastructure
+  decision (inventory flagged). (2) a stray `}` at app-module level does
+  NOT error (rs errors there) — Phase 5 verify item.
 - **Phase 3 — Word batches.** Batch 0 collisions first, then the gap
   groups per the Phase 0 inventory (JQ paths, records round-out,
   higher-order/sorting deltas, strings/regex/shell words, math/datetime

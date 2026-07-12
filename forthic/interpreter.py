@@ -268,6 +268,9 @@ class Interpreter:
     def module_stack_pop(self) -> Module:
         return self._module_stack.pop()
 
+    def module_stack_depth(self) -> int:
+        return len(self._module_stack)
+
     def register_module(self, module: Module) -> None:
         """Register a module with the interpreter."""
         self._registered_modules[module.name] = module
