@@ -182,9 +182,18 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
     HAS-KEY?, DELETE copy-on-write (<DEL dropped), REC>ENTRIES/
     ENTRIES>REC round-trip; REC now validates pairs strictly (shared
     build_record). Spec: tests/unit/core/test_word_batch3.py.
-- **Phase 4 — Interpolation redesign.** `${name}` contract into core;
-  delete the bare-dot grammar (and `{.var}@` if present); PRINT shares.
-  Port ts PR #41 / rs PR #15 directly.
+  - **Batch 4 DONE (2026-07-12, feat/word-batch4) — also completes
+    Phase 4.** The string/regex/shell words (SUBSTR, SPLICE, STARTS/
+    ENDS-WITH?, TRIM-PREFIX/-SUFFIX, RE-MATCH?, RE-REPLACE with JS
+    backref normalization, LINES/UNLINES, GREP/GREP-V, SED, CUT;
+    RE-MATCH-ALL fixed, REPLACE fully literal) and the ${name}
+    interpolation redesign: names-only holes, read-only
+    find_variable lookup, \${ escapes, null_text default "",
+    bare-dot grammar deleted. Spec: tests/unit/core/test_word_batch4.py.
+- **Phase 4 — Interpolation redesign. DONE (2026-07-12, with Batch 4).**
+  `${name}` contract in core; bare-dot grammar deleted (py never had
+  `{.var}@`); PRINT shares the machinery; READ-ONLY lookup via the new
+  Interpreter.find_variable.
 - **Phase 5 — Verify pass.** The py edition of present-but-verify: @
   read-only, OR/AND arity, MEAN dispatch, datetime specifics (#35 rule),
   TAKE/SLICE bounds — plus anything Phase 0 flags as

@@ -200,7 +200,7 @@ class TestStringOperations:
         """Test INTERPOLATE with simple variable."""
         interp = StandardInterpreter()
 
-        await interp.run('\"Alice\" .name ! \"Hello .name\" INTERPOLATE')
+        await interp.run('\"Alice\" .name ! \"Hello ${name}\" INTERPOLATE')
         result = interp.stack_pop()
         assert result == "Hello Alice"
 
@@ -209,7 +209,7 @@ class TestStringOperations:
         """Test INTERPOLATE with array and custom separator."""
         interp = StandardInterpreter()
 
-        await interp.run('[1 2 3] .items ! \".items\" [.separator \" | \"] ~> INTERPOLATE')
+        await interp.run('[1 2 3] .items ! \"${items}\" [.separator \" | \"] ~> INTERPOLATE')
         result = interp.stack_pop()
         assert result == "1 | 2 | 3"
 
@@ -218,7 +218,7 @@ class TestStringOperations:
         """Test PRINT with string interpolation."""
         interp = StandardInterpreter()
 
-        await interp.run('5 .count ! \"Count: .count\" PRINT')
+        await interp.run('5 .count ! \"Count: ${count}\" PRINT')
         captured = capsys.readouterr()
         assert "Count: 5" in captured.out
 
@@ -246,7 +246,7 @@ class TestStringOperations:
         interp = StandardInterpreter()
 
         await interp.run('3 .number ! ["apple" "banana"] .queue !')
-        await interp.run('"There are .number items: .queue" INTERPOLATE')
+        await interp.run('"There are ${number} items: ${queue}" INTERPOLATE')
         result = interp.stack_pop()
         assert result == "There are 3 items: apple, banana"
 
@@ -256,7 +256,7 @@ class TestStringOperations:
         interp = StandardInterpreter()
 
         await interp.run('"hello" .word !')
-        await interp.run('"Say .word" INTERPOLATE UPPERCASE')
+        await interp.run('"Say ${word}" INTERPOLATE UPPERCASE')
         result = interp.stack_pop()
         assert result == "SAY HELLO"
 
@@ -265,27 +265,27 @@ class TestStringOperations:
         """Test INTERPOLATE with custom null_text option."""
         interp = StandardInterpreter()
 
-        await interp.run('"Missing: .missing" [.null_text "N/A"] ~> INTERPOLATE')
+        await interp.run('"Missing: ${missing}" [.null_text "N/A"] ~> INTERPOLATE')
         result = interp.stack_pop()
         assert result == "Missing: N/A"
 
     @pytest.mark.asyncio
-    async def test_interpolate_escaped_dots(self) -> None:
-        """Test INTERPOLATE with escaped dots."""
+    async def test_interpolate_escaped_holes(self) -> None:
+        """Test INTERPOLATE with escaped holes."""
         interp = StandardInterpreter()
 
         await interp.run('42 .linecount !')
-        await interp.run(r'"Config: \.bashrc has .linecount lines" INTERPOLATE')
+        await interp.run(r'"Literal \${x} vs ${linecount}" INTERPOLATE')
         result = interp.stack_pop()
-        assert result == "Config: .bashrc has 42 lines"
+        assert result == "Literal ${x} vs 42"
 
     @pytest.mark.asyncio
     async def test_interpolate_decimal_numbers(self) -> None:
-        """Test INTERPOLATE doesn't interpolate decimal numbers."""
+        """Test INTERPOLATE leaves bare dots and dollars literal."""
         interp = StandardInterpreter()
 
         await interp.run('5 .count !')
-        await interp.run('"Price is $10.50 for .count items" INTERPOLATE')
+        await interp.run('"Price is $10.50 for ${count} items" INTERPOLATE')
         result = interp.stack_pop()
         assert result == "Price is $10.50 for 5 items"
 
@@ -295,17 +295,17 @@ class TestStringOperations:
         interp = StandardInterpreter()
 
         await interp.run('3 .number ! ["apple" "banana"] .queue !')
-        await interp.run('"There are .number items in the queue: .queue" PRINT')
+        await interp.run('"There are ${number} items in the queue: ${queue}" PRINT')
         captured = capsys.readouterr()
         assert "There are 3 items in the queue: apple, banana" in captured.out
 
     @pytest.mark.asyncio
     async def test_print_decimal_numbers(self, capsys) -> None:
-        """Test PRINT doesn't interpolate decimal numbers."""
+        """Test PRINT leaves bare dots and dollars literal."""
         interp = StandardInterpreter()
 
         await interp.run('5 .count !')
-        await interp.run('"Price is $10.50 for .count items" PRINT')
+        await interp.run('"Price is $10.50 for ${count} items" PRINT')
         captured = capsys.readouterr()
         assert "Price is $10.50 for 5 items" in captured.out
 
@@ -315,16 +315,16 @@ class TestStringOperations:
         interp = StandardInterpreter()
 
         await interp.run('["apple" "banana"] .items !')
-        await interp.run('".items are available" PRINT')
+        await interp.run('"${items} are available" PRINT')
         captured = capsys.readouterr()
         assert "apple, banana are available" in captured.out
 
     @pytest.mark.asyncio
     async def test_print_undefined_variable(self, capsys) -> None:
-        """Test PRINT with undefined variable creates null."""
+        """PRINT with an undefined variable renders null_text and creates nothing."""
         interp = StandardInterpreter()
 
-        await interp.run('"Value: .undefined" PRINT')
+        await interp.run('"Value: ${undefined}" [.null_text "null"] ~> PRINT')
         captured = capsys.readouterr()
         assert "Value: null" in captured.out or "Value: None" in captured.out
 
@@ -333,19 +333,19 @@ class TestStringOperations:
         """Test PRINT with custom null_text option."""
         interp = StandardInterpreter()
 
-        await interp.run('"Missing: .missing" [.null_text "N/A"] ~> PRINT')
+        await interp.run('"Missing: ${missing}" [.null_text "N/A"] ~> PRINT')
         captured = capsys.readouterr()
         assert "Missing: N/A" in captured.out
 
     @pytest.mark.asyncio
-    async def test_print_escaped_dots(self, capsys) -> None:
-        """Test PRINT with escaped dots."""
+    async def test_print_escaped_holes(self, capsys) -> None:
+        """Test PRINT with escaped holes."""
         interp = StandardInterpreter()
 
         await interp.run('42 .linecount !')
-        await interp.run(r'"Config file: \.bashrc has .linecount lines" PRINT')
+        await interp.run(r'"Literal \${x} vs ${linecount}" PRINT')
         captured = capsys.readouterr()
-        assert "Config file: .bashrc has 42 lines" in captured.out
+        assert "Literal ${x} vs 42" in captured.out
 
     @pytest.mark.asyncio
     async def test_print_empty_string(self, capsys) -> None:
@@ -362,7 +362,7 @@ class TestStringOperations:
         interp = StandardInterpreter()
 
         await interp.run('TRUE .flag !')
-        await interp.run('"Flag is: .flag" PRINT')
+        await interp.run('"Flag is: ${flag}" PRINT')
         captured = capsys.readouterr()
         assert "Flag is: true" in captured.out or "Flag is: True" in captured.out
 

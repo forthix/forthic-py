@@ -33,6 +33,7 @@ from .module import (
     Module,
     PushValueWord,
     Stack,
+    Variable,
     Word,
 )
 from .tokenizer import CodeLocation, PositionedString, Token, Tokenizer, TokenType
@@ -270,6 +271,16 @@ class Interpreter:
 
     def module_stack_depth(self) -> int:
         return len(self._module_stack)
+
+    def find_variable(self, name: str) -> Variable | None:
+        """READ-ONLY variable lookup down the module stack. Unlike the
+        get-or-create path behind ! / @, a miss returns None and creates
+        nothing (interpolation renders state, never mutates it)."""
+        for module in reversed(self._module_stack):
+            variable = module.variables.get(name)
+            if variable is not None:
+                return variable
+        return None
 
     def register_module(self, module: Module) -> None:
         """Register a module with the interpreter."""

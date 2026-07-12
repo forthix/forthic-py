@@ -298,7 +298,26 @@ sanctioned spec), remove |REC@, RELABEL sorted() removal
 (record_module.py:148), strict integer parse for `[n]` path segments (no
 leniency). py's REC@ field-array drilling matches ts — keep.
 
-**Batch 4 — strings & interpolation: TODO**
+**Batch 4 — strings & interpolation: DONE (feat/word-batch4)**
+SUBSTR/SPLICE (JS-slice clamping over code-point indices — host-native
+units), STARTS-WITH?/ENDS-WITH?, TRIM-PREFIX/TRIM-SUFFIX (one
+occurrence), RE-MATCH? (predicate), RE-REPLACE (JS $n/$&/$$ backrefs
+normalized to Python's re.sub template), REPLACE now fully literal
+(str.replace — the old re.escape+sub still interpreted backslashes in
+the replacement), RE-MATCH verified ([full, g1..], None non-participating,
+False no-match — ts parity), RE-MATCH-ALL fixed (group-1-else-full; the
+old code errored on group-less patterns), LINES/UNLINES, GREP/GREP-V
+(non-string asymmetry), SED, CUT ('' splits into chars), all regex words
+compile via a clean "Invalid regex" error.
+INTERPOLATE + PRINT REDESIGNED to the settled ${name} contract (ts PR
+#41 / rs PR #15): names-only holes (non-name body hard error — templates
+can never execute Forthic), ${.name} spelling, \${ escapes, __
+reserved, READ-ONLY lookup via new Interpreter.find_variable (miss
+renders as null_text default "", creates nothing — the old grammar
+MINTED variables on miss), arrays join with separator, records → compact
+JSON, [.json TRUE]. The bare-dot grammar is dead. null_text default
+changed "null" → "". Spec: tests/unit/core/test_word_batch4.py.
+Original spec:
 STR-LENGTH (py `len()` = code points — host-native units per contract;
 never assert cross-runtime length equality on astral-plane input), SUBSTR
 (JS String.slice clamping, negatives from the end), SPLICE,
