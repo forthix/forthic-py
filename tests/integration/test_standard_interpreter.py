@@ -1682,7 +1682,8 @@ class TestLogicAndComparison:
         stack = interp.get_stack()
         assert stack[0] is True
         assert stack[1] is False
-        assert stack[2] is True
+        # Nothing can match against an empty set (ts #31)
+        assert stack[2] is False
 
     @pytest.mark.asyncio
     async def test_all_operation(self) -> None:

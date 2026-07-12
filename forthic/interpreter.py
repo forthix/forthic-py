@@ -190,6 +190,13 @@ class Interpreter:
         self._is_compiling = False
         self._is_memo_definition = False
         self._cur_definition = None
+
+        # Clear per-run parsing state too, so reset() after a failed run fully
+        # restores the interpreter rather than leaving a stale tokenizer or a
+        # dangling previous_token
+        self._tokenizer_stack = []
+        self._previous_token = None
+
         self._string_location = None
 
     # ======================

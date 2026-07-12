@@ -13,6 +13,11 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
+from ...utils import is_truthy, values_equal
+
+# Generous ceiling on how many elements a single word may materialize from
+# caller-supplied sizes (SLICE, RANGE). Fails fast instead of OOMing the host.
+MAX_MATERIALIZED_ELEMENTS = 10_000_000
 
 
 class ArrayModule(DecoratedModule):
@@ -82,7 +87,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             else:
                 interp.stack_push(container[n])
         else:
-            keys = sorted(container.keys())
+            keys = list(container.keys())
             if n < 0 or n >= len(keys):
                 interp.stack_push(None)
             else:
@@ -99,7 +104,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
                 return None
             return container[-1]
         else:
-            keys = sorted(container.keys())
+            keys = list(container.keys())
             if len(keys) == 0:
                 return None
             return container[keys[-1]]
@@ -124,6 +129,14 @@ Several words support options via the ~> operator using syntax: [.option_name va
         start = normalize_index(start)
         end = normalize_index(end)
 
+        # SLICE pads out-of-range indexes with nulls, so a huge end index
+        # would materialize a huge array. Guard the span before building it.
+        span = abs(end - start) + 1
+        if span > MAX_MATERIALIZED_ELEMENTS:
+            raise ValueError(
+                f"SLICE span {span} is too large (limit {MAX_MATERIALIZED_ELEMENTS})"
+            )
+
         step = -1 if start > end else 1
         indexes: list[int | None] = [start]
 
@@ -147,7 +160,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
                     result.append(_container[i])
             return result
         else:
-            keys = sorted(_container.keys())
+            keys = list(_container.keys())
             result_dict: dict = {}
             for i in indexes:
                 if i is not None:
@@ -156,7 +169,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             return result_dict
 
     @WordDecorator("( container:any[] n:number [options:WordOptions] -- result:any[] )", "Take first n elements")
-    async def TAKE(self, container: list, n: int, options: dict[str, Any]) -> list:
+    async def TAKE(self, container: Any, n: int, options: dict[str, Any]) -> Any:
         interp = self._module.interp
         assert interp is not None
 
@@ -168,15 +181,16 @@ Several words support options via the ~> operator using syntax: [.option_name va
         if container is None:
             container = []
 
+        taken: Any
+        rest: Any
         if isinstance(container, list):
             taken = container[:n]
             rest = container[n:]
         else:
-            keys = sorted(container.keys())
-            taken_keys = keys[:n]
-            rest_keys = keys[n:]
-            taken = [container[k] for k in taken_keys]
-            rest = [container[k] for k in rest_keys]
+            # Records keep their shape and insertion order
+            keys = list(container.keys())
+            taken = {k: container[k] for k in keys[:n]}
+            rest = {k: container[k] for k in keys[n:]}
 
         if flags["push_rest"]:
             interp.stack_push(taken)
@@ -194,9 +208,9 @@ Several words support options via the ~> operator using syntax: [.option_name va
         if isinstance(container, list):
             return container[n:]
         else:
-            keys = sorted(container.keys())
-            rest_keys = keys[n:]
-            return [container[k] for k in rest_keys]
+            # Records keep their shape and insertion order
+            keys = list(container.keys())
+            return {k: container[k] for k in keys[n:]}
 
     @ForthicDirectWord("( container:any value:any -- key:any )", "Find key of value in container")
     async def KEY_OF(self, interp: Interpreter) -> None:
@@ -357,8 +371,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             for item in container:
                 interp.stack_push(item)
         else:
-            keys = sorted(container.keys())
-            for k in keys:
+            for k in container.keys():
                 interp.stack_push(container[k])
 
     # ==================
@@ -470,7 +483,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
                 interp.stack_push(item)
                 await interp.run(forthic, string_location)
                 should_select = interp.stack_pop()
-                if should_select:
+                if is_truthy(should_select):
                     result.append(item)
         else:
             result = {}
@@ -481,7 +494,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
                 interp.stack_push(v)
                 await interp.run(forthic, string_location)
                 should_select = interp.stack_pop()
-                if should_select:
+                if is_truthy(should_select):
                     result[k] = v
 
         interp.stack_push(result)
@@ -497,51 +510,37 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return array
 
+    @staticmethod
+    def _set_op(lcontainer: Any, rcontainer: Any, keep: bool) -> Any:
+        """Shared set operation for DIFFERENCE (keep=False) and INTERSECTION
+        (keep=True). The result follows the LEFT operand's shape:
+        - array left: element membership against the right's elements (its
+          values if the right is a record);
+        - record left: keep/drop entries whose KEY is in the right's key set
+          (its elements if the right is an array, its keys if it's a record)
+          — i.e. INTERSECTION behaves like PICK and DIFFERENCE like OMIT.
+        """
+        left = lcontainer if lcontainer is not None else []
+        right = rcontainer if rcontainer is not None else []
+
+        if isinstance(left, list):
+            relements = right if isinstance(right, list) else list(right.values())
+            return [
+                item
+                for item in left
+                if any(values_equal(item, el) for el in relements) == keep
+            ]
+
+        rkeys = set(right) if isinstance(right, list) else set(right.keys())
+        return {k: v for k, v in left.items() if (k in rkeys) == keep}
+
     @WordDecorator("( lcontainer:any rcontainer:any -- result:any )", "Set difference between two containers")
     async def DIFFERENCE(self, lcontainer: Any, rcontainer: Any) -> Any:
-        _lcontainer: Any = lcontainer if lcontainer is not None else []
-        _rcontainer = rcontainer if rcontainer is not None else []
-
-        def difference(left: list, right: list) -> list:
-            res = []
-            for item in left:
-                if item not in right:
-                    res.append(item)
-            return res
-
-        if isinstance(_rcontainer, list):
-            return difference(_lcontainer, _rcontainer)
-        else:
-            lkeys = list(_lcontainer.keys())
-            rkeys = list(_rcontainer.keys())
-            diff = difference(lkeys, rkeys)
-            result = {}
-            for k in diff:
-                result[k] = _lcontainer[k]
-            return result
+        return ArrayModule._set_op(lcontainer, rcontainer, False)
 
     @WordDecorator("( lcontainer:any rcontainer:any -- result:any )", "Set intersection between two containers")
     async def INTERSECTION(self, lcontainer: Any, rcontainer: Any) -> Any:
-        _lcontainer: Any = lcontainer if lcontainer is not None else []
-        _rcontainer = rcontainer if rcontainer is not None else []
-
-        def intersection(left: list, right: list) -> list:
-            res = []
-            for item in left:
-                if item in right:
-                    res.append(item)
-            return res
-
-        if isinstance(_rcontainer, list):
-            return intersection(_lcontainer, _rcontainer)
-        else:
-            lkeys = list(_lcontainer.keys())
-            rkeys = list(_rcontainer.keys())
-            inter = intersection(lkeys, rkeys)
-            result = {}
-            for k in inter:
-                result[k] = _lcontainer[k]
-            return result
+        return ArrayModule._set_op(lcontainer, rcontainer, True)
 
     @WordDecorator("( lcontainer:any rcontainer:any -- result:any )", "Set union between two containers")
     async def UNION(self, lcontainer: Any, rcontainer: Any) -> Any:

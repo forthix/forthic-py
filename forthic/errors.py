@@ -280,8 +280,8 @@ def get_error_description(forthic: str, forthic_error: ForthicError) -> str:
             # Show definition location with highlighting
             def_line_num = def_loc.line
             def_lines = forthic.split("\n")[: def_line_num]
-            def_error_line = " " * (def_loc.column - 1) + "^" * (
-                (def_loc.end_pos or def_loc.start_pos + 1) - def_loc.start_pos
+            def_error_line = " " * max(0, def_loc.column - 1) + "^" * max(
+                1, (def_loc.end_pos or def_loc.start_pos + 1) - def_loc.start_pos
             )
 
             def_location_info = f"at line {def_line_num}"
@@ -291,8 +291,8 @@ def get_error_description(forthic: str, forthic_error: ForthicError) -> str:
             # Show call location with highlighting
             call_line_num = location.line
             call_lines = forthic.split("\n")[: call_line_num]
-            call_error_line = " " * (location.column - 1) + "^" * (
-                (location.end_pos or location.start_pos + 1) - location.start_pos
+            call_error_line = " " * max(0, location.column - 1) + "^" * max(
+                1, (location.end_pos or location.start_pos + 1) - location.start_pos
             )
 
             call_location_info = f"line {call_line_num}"
@@ -312,8 +312,8 @@ def get_error_description(forthic: str, forthic_error: ForthicError) -> str:
     # Standard error format for other errors
     line_num = location.line
     lines = forthic.split("\n")[: line_num]
-    error_line = " " * (location.column - 1) + "^" * (
-        (location.end_pos or location.start_pos + 1) - location.start_pos
+    error_line = " " * max(0, location.column - 1) + "^" * max(
+        1, (location.end_pos or location.start_pos + 1) - location.start_pos
     )
 
     location_info = f"at line {line_num}"

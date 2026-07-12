@@ -209,7 +209,8 @@ class TestMembershipOperations:
         stack = interp.get_stack().get_items()
         assert stack[0] is True
         assert stack[1] is False
-        assert stack[2] is True
+        # Nothing can match against an empty set (ts #31)
+        assert stack[2] is False
 
     @pytest.mark.asyncio
     async def test_any_with_numbers(self, interp):
@@ -271,10 +272,10 @@ class TestTypeConversion:
     @pytest.mark.asyncio
     async def test_to_bool_with_arrays(self, interp):
         """Test >BOOL with arrays."""
-        # Note: In Python, empty arrays are falsy: bool([]) == False
-        # This differs from JavaScript where empty arrays are truthy
+        # JS truthiness is the contract: empty containers are TRUTHY
+        # (Python's bool([]) disagrees and must not be used)
         await interp.run("[] >BOOL")
-        assert interp.stack_pop() is False
+        assert interp.stack_pop() is True
 
         await interp.run("[1] >BOOL")
         assert interp.stack_pop() is True
