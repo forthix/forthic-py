@@ -81,11 +81,15 @@ Confirmed good (verify, don't rebuild):
    words counted in standard modules vs 177 in ts/rs — the gap is
    inventory, not infrastructure. record_module.py shows 0 decorators —
    check how it registers.
-9. **Transports exist** (jsonrpc + grpc dirs) — verify the ErrorInfo wire
-   shape {message, error_type, context, word_location} and serializer
-   type tags against the ts/rs golden fixtures.
+9. **Transport exists** (jsonrpc; gRPC support was removed in Phase 0 —
+   JSON-RPC is the transport) — verify the ErrorInfo wire shape
+   {message, error_type, context, word_location} and serializer type
+   tags against the ts/rs golden fixtures.
 10. **819 test functions** across 42 files — real coverage to build on.
-11. **No CI** (no .github/workflows) — same gap rs had.
+    (Phase 0: 749 remain after the gRPC removal — the deleted grpc/
+    multi-runtime tests accounted for the rest.)
+11. **No CI** (no .github/workflows) — same gap rs had. (Closed in
+    Phase 0.)
 
 ## Phases
 
@@ -94,11 +98,17 @@ commit → annotate diff (hunk) → review → PR → merge → next.
 **Gates**: `pytest`, `ruff check`, `mypy` (pyproject already configures
 ruff + mypy for py310), plus cross-runtime smoke once wired.
 
-- **Phase 0 — CI + inventory.** Add GitHub Actions (pytest/ruff/mypy).
-  Run the word-inventory agent against post-scrub ts to produce
-  `plans/WORD-INVENTORY.md` (py edition): word-by-word delta, collision
-  table (DROP/SKIP, CONCAT, RANGE, FLATTEN), classic-word list, batch
-  assignments. The rs inventory is the template; expect the same shape.
+- **Phase 0 — CI + inventory. DONE (2026-07-12).** GitHub Actions added
+  (pytest on py 3.10–3.12 + JSON-RPC smoke; ruff; mypy — all green, via
+  uv). `plans/WORD-INVENTORY.md` (py edition) produced and spot-verified:
+  73 canonical words missing, MORE collisions than rs (variable-arity
+  +/*/MAX/MIN/OR/AND survive in py), a py-specific underscore-name bug
+  (14 words registered as GROUP_BY etc.), all 34 ts classics present,
+  |REC@ still live. Scope change made in this phase: **gRPC support
+  removed entirely** (owner call — JSON-RPC is the transport);
+  module_loader + Remote*Error moved into forthic.jsonrpc, servicer made
+  public (JsonRpcServicer), grpc extra/script/Makefile targets deleted.
+  Dev env moved to uv (uv venv/.venv; uv.lock not committed).
 - **Phase 1 — Correctness tier.** is_truthy sweep (audit item 1); remove
   key-sorting (item 2); >STR/stringification contract (records → compact
   JSON, None → ""); values-equal semantics for temporal/record types;

@@ -18,7 +18,7 @@ from ...decorators import ForthicWord as WordDecorator
 class JSONModule(DecoratedModule):
     """JSON serialization, parsing, and formatting operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("json")
         register_module_doc(
             JSONModule,

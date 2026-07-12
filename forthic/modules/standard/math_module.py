@@ -6,7 +6,7 @@ Provides arithmetic, comparison, and mathematical utility functions.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
@@ -18,7 +18,7 @@ from ...decorators import ForthicWord as WordDecorator
 class MathModule(DecoratedModule):
     """Mathematical operations and utilities including arithmetic, aggregation, and conversions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("math")
         register_module_doc(
             MathModule,
@@ -72,7 +72,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         "( a:number b:number -- sum:number ) OR ( numbers:number[] -- sum:number )", "Add two numbers or sum array", "ADD"
     )
     async def plus_ADD(self, interp: Interpreter) -> None:
-        return await self.plus(interp)
+        return cast(None, await self.plus(interp))
 
     @WordDecorator("( a:number b:number -- difference:number )", "Subtract b from a", "-")
     async def minus(self, a: float | int | None, b: float | int | None) -> float | int | None:
@@ -118,7 +118,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         "MULTIPLY",
     )
     async def times_MULTIPLY(self, interp: Interpreter) -> None:
-        return await self.times(interp)
+        return cast(None, await self.times(interp))
 
     @WordDecorator("( a:number b:number -- quotient:number )", "Divide a by b", "/")
     async def divide_by(self, a: float | int | None, b: float | int | None) -> float | None:
@@ -368,19 +368,19 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
 
     @WordDecorator("( a:any b:any -- result:bool )", "Less than", "<")
     async def less_than(self, a: Any, b: Any) -> bool:
-        return a < b
+        return cast(bool, a < b)
 
     @WordDecorator("( a:any b:any -- result:bool )", "Greater than", ">")
     async def greater_than(self, a: Any, b: Any) -> bool:
-        return a > b
+        return cast(bool, a > b)
 
     @WordDecorator("( a:any b:any -- result:bool )", "Less than or equal", "<=")
     async def less_equal(self, a: Any, b: Any) -> bool:
-        return a <= b
+        return cast(bool, a <= b)
 
     @WordDecorator("( a:any b:any -- result:bool )", "Greater than or equal", ">=")
     async def greater_equal(self, a: Any, b: Any) -> bool:
-        return a >= b
+        return cast(bool, a >= b)
 
     # ==================
     # Constants (from original implementation)

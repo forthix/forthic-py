@@ -354,7 +354,7 @@ class TestStringOperations:
         interp = StandardInterpreter()
 
         await interp.run('"" PRINT')
-        captured = capsys.readouterr()
+        capsys.readouterr()
         # Just verify it didn't crash - output will be empty or newline
 
     @pytest.mark.asyncio

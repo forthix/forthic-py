@@ -22,11 +22,10 @@ Examples:
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING, Any
-from zoneinfo import ZoneInfo
 
-from ...decorators import ForthicDirectWord, ForthicWord, DecoratedModule, register_module_doc
+from ...decorators import DecoratedModule, ForthicDirectWord, ForthicWord, register_module_doc
 
 if TYPE_CHECKING:
     from ...interpreter import Interpreter
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
 class DateTimeModule(DecoratedModule):
     """DateTime module for Forthic."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("datetime")
         register_module_doc(
             DateTimeModule,

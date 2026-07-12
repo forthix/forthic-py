@@ -111,7 +111,7 @@ def pop_options_if_present(interp: Interpreter) -> dict[str, Any]:
 
     top = interp.stack_peek()
     if isinstance(top, WordOptions):
-        opts = interp.stack_pop()
+        opts: WordOptions = interp.stack_pop()
         return opts.to_dict()
 
     return {}

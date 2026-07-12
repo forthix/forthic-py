@@ -9,7 +9,7 @@ from .decorators import (
     ForthicWord as WordDecorator,
 )
 from .errors import (
-    CodeLocationData,
+    CodeLocation,
     ExtraSemicolonError,
     ForthicError,
     IntentionalStopError,
@@ -42,7 +42,6 @@ from .module import (
     WordHandler,
 )
 from .tokenizer import (
-    CodeLocation,
     PositionedString,
     Token,
     Tokenizer,
@@ -78,7 +77,6 @@ __all__ = [
     "Tokenizer",
     "Token",
     "TokenType",
-    "CodeLocation",
     "PositionedString",
     # Literals
     "LiteralHandler",
@@ -101,7 +99,7 @@ __all__ = [
     "ModuleError",
     "TooManyAttemptsError",
     "IntentionalStopError",
-    "CodeLocationData",
+    "CodeLocation",
     # Word Options
     "WordOptions",
     "pop_options_if_present",

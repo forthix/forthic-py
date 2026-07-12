@@ -11,7 +11,7 @@ import weakref
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from ..interpreter import Interpreter
@@ -266,7 +266,7 @@ def ForthicDirectWord(
         # Wrap to ensure metadata storage
         @wraps(method)
         async def wrapper(self: Any, interp: Interpreter) -> None:
-            return await method(self, interp)
+            return cast(None, await method(self, interp))
 
         # Attach metadata to wrapper for later retrieval
         wrapper._forthic_direct_word_metadata = metadata  # type: ignore
@@ -356,6 +356,7 @@ class DecoratedModule:
         """Register all decorated words with the module."""
         # Register @ForthicWord decorated methods
         cls = type(self)
+        metadata: WordMetadata | DirectWordMetadata
         if cls in _word_metadata:
             for method_name, metadata in _word_metadata[cls].items():
                 # Get the wrapped method (already modified by decorator)
@@ -380,6 +381,7 @@ class DecoratedModule:
         docs: list[dict[str, str]] = []
 
         cls = type(self)
+        metadata: WordMetadata | DirectWordMetadata
 
         # Get @ForthicWord decorated methods
         if cls in _word_metadata:

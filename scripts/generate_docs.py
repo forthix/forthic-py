@@ -241,7 +241,7 @@ def main() -> None:
             total_size += len(module_markdown)
             print(f"  ✓ {module_doc.name}.md ({len(module_doc.words)} words)")
 
-        print(f"\n✓ Documentation complete!")
+        print("\n✓ Documentation complete!")
         print(f"  Total files: {len(module_docs) + 1}")
         print(f"  Total size: {total_size / 1024:.2f} KB")
 

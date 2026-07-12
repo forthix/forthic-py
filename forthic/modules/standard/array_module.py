@@ -18,7 +18,7 @@ from ...decorators import ForthicWord as WordDecorator
 class ArrayModule(DecoratedModule):
     """Array and collection operations for manipulating arrays and records."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("array")
         register_module_doc(
             ArrayModule,
@@ -158,6 +158,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     @WordDecorator("( container:any[] n:number [options:WordOptions] -- result:any[] )", "Take first n elements")
     async def TAKE(self, container: list, n: int, options: dict[str, Any]) -> list:
         interp = self._module.interp
+        assert interp is not None
 
         flags = {
             "with_key": options.get("with_key"),
@@ -315,7 +316,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
         depth = flags["depth"]
 
         if isinstance(items, list):
-            result = await descend_list(items, depth, [], errors)
+            result: list | dict = await descend_list(items, depth, [], errors)
         else:
             result = await descend_record(items, depth, {}, errors)
 
@@ -401,6 +402,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     )
     async def ZIP_WITH(self, container1: list, container2: list, forthic: str) -> Any:
         interp = self._module.interp
+        assert interp is not None
         string_location = interp.get_string_location()
 
         if container1 is None:
@@ -461,7 +463,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             return
 
         if isinstance(container, list):
-            result = []
+            result: Any = []
             for i, item in enumerate(container):
                 if flags["with_key"]:
                     interp.stack_push(i)
@@ -497,13 +499,13 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @WordDecorator("( lcontainer:any rcontainer:any -- result:any )", "Set difference between two containers")
     async def DIFFERENCE(self, lcontainer: Any, rcontainer: Any) -> Any:
-        _lcontainer = lcontainer if lcontainer is not None else []
+        _lcontainer: Any = lcontainer if lcontainer is not None else []
         _rcontainer = rcontainer if rcontainer is not None else []
 
-        def difference(l: list, r: list) -> list:
+        def difference(left: list, right: list) -> list:
             res = []
-            for item in l:
-                if item not in r:
+            for item in left:
+                if item not in right:
                     res.append(item)
             return res
 
@@ -520,13 +522,13 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @WordDecorator("( lcontainer:any rcontainer:any -- result:any )", "Set intersection between two containers")
     async def INTERSECTION(self, lcontainer: Any, rcontainer: Any) -> Any:
-        _lcontainer = lcontainer if lcontainer is not None else []
+        _lcontainer: Any = lcontainer if lcontainer is not None else []
         _rcontainer = rcontainer if rcontainer is not None else []
 
-        def intersection(l: list, r: list) -> list:
+        def intersection(left: list, right: list) -> list:
             res = []
-            for item in l:
-                if item in r:
+            for item in left:
+                if item in right:
                     res.append(item)
             return res
 
@@ -548,16 +550,16 @@ Several words support options via the ~> operator using syntax: [.option_name va
         if rcontainer is None:
             rcontainer = []
 
-        def union(l: list, r: list) -> list:
+        def union(left: list, right: list) -> list:
             keyset: dict = {}
-            for item in l:
+            for item in left:
                 keyset[item] = True
-            for item in r:
+            for item in right:
                 keyset[item] = True
             return list(keyset.keys())
 
         if isinstance(rcontainer, list):
-            result = union(lcontainer, rcontainer)
+            result: list | dict = union(lcontainer, rcontainer)
         else:
             lkeys = list(lcontainer.keys())
             rkeys = list(rcontainer.keys())
@@ -587,6 +589,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             return container
 
         interp = self._module.interp
+        assert interp is not None
         comparator = options.get("comparator")
 
         flag_string_position = interp.get_string_location()
@@ -609,9 +612,9 @@ Several words support options via the ~> operator using syntax: [.option_name va
                     res.append([val, aug_val])
                 return res
 
-            def cmp_items(l: tuple, r: tuple) -> int:
-                l_val = l[1]
-                r_val = r[1]
+            def cmp_items(left: tuple, right: tuple) -> int:
+                l_val = left[1]
+                r_val = right[1]
 
                 if l_val < r_val:
                     return -1
@@ -632,9 +635,9 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         # Sort with key func
         def sort_with_key_func(key_func: Any) -> list:
-            def cmp_items(l: Any, r: Any) -> int:
-                l_val = key_func(l)
-                r_val = key_func(r)
+            def cmp_items(left: Any, right: Any) -> int:
+                l_val = key_func(left)
+                r_val = key_func(right)
                 if l_val < r_val:
                     return -1
                 elif l_val > r_val:
@@ -674,6 +677,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
     @WordDecorator("( items:any[] forthic:string -- indexed:any )", "Create index mapping from array indices to values")
     async def INDEX(self, items: list, forthic: str) -> dict:
         interp = self._module.interp
+        assert interp is not None
         string_location = interp.get_string_location()
 
         if items is None:
@@ -968,7 +972,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
             return res
 
         if isinstance(container, list):
-            result = flatten_array(container, depth, [])
+            result: list | dict = flatten_array(container, depth, [])
         else:
             result = flatten_record(container, depth, {}, [])
 

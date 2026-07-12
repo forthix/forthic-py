@@ -1,8 +1,8 @@
 """Tests for the DateTime module."""
 
+from datetime import datetime
+
 import pytest
-from datetime import date, time, datetime
-from zoneinfo import ZoneInfo
 
 from forthic.interpreter import StandardInterpreter
 

@@ -4,14 +4,13 @@ This module contains extensive tests covering all major features of the Forthic 
 including literals, variables, data structures, control flow, and more.
 """
 
+
 import pytest
-from datetime import datetime, date, time
 
 from forthic import (
     ExtraSemicolonError,
     InvalidVariableNameError,
     MissingSemicolonError,
-    PositionedString,
     StackUnderflowError,
     StandardInterpreter,
     UnknownModuleError,
