@@ -155,10 +155,10 @@ class TestConstants:
         assert abs(result - math.e) < 0.0001
 
     @pytest.mark.asyncio
-    async def test_infinity(self, interp):
-        """Test INFINITY constant."""
-        await interp.run("INFINITY")
-        assert interp.stack_pop() == float('inf')
+    async def test_infinity_is_gone(self, interp):
+        """Tombstone: INFINITY dropped (no-sibling classic, owner decision)."""
+        with pytest.raises(Exception, match="INFINITY"):
+            await interp.run("INFINITY")
 
 
 class TestMean:

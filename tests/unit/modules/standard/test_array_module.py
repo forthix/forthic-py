@@ -136,11 +136,10 @@ class TestSortOperations:
     """Test sort operations."""
 
     @pytest.mark.asyncio
-    async def test_shuffle(self, interp):
-        """Test SHUFFLE."""
-        await interp.run("[0 1 2 3 4 5 6] SHUFFLE")
-        result = interp.stack_pop()
-        assert len(result) == 7
+    async def test_shuffle_is_gone(self, interp):
+        """Tombstone: SHUFFLE dropped (no-sibling classic, owner decision)."""
+        with pytest.raises(Exception, match="SHUFFLE"):
+            await interp.run("[1 2 3] SHUFFLE")
 
     @pytest.mark.asyncio
     async def test_sort(self, interp):

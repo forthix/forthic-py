@@ -114,7 +114,7 @@ class TestVariables:
 
     @pytest.mark.asyncio
     async def test_auto_create_variables_with_string_names(self) -> None:
-        """Test auto-creating variables with string names."""
+        """! and !@ auto-create; @ is read-only and errors on unknown names."""
         interp = StandardInterpreter()
 
         # Test ! with string variable name (auto-creates variable)
@@ -128,14 +128,11 @@ class TestVariables:
         assert autovar1 is not None
         assert autovar1.get_value() == "hello"
 
-        # Test @ with string variable name (auto-creates with None)
-        await interp.run('"autovar2" @')
-        assert interp.stack_pop() is None
-
-        # Verify variable was created
-        autovar2 = app_module.variables.get("autovar2")
-        assert autovar2 is not None
-        assert autovar2.get_value() is None
+        # @ is READ-ONLY: an unknown variable name errors and creates
+        # nothing (only ! and !@ get-or-create)
+        with pytest.raises(Exception, match="autovar2"):
+            await interp.run('"autovar2" @')
+        assert app_module.variables.get("autovar2") is None
 
         # Test !@ with string variable name (auto-creates and returns value)
         await interp.run('"world" "autovar3" !@')
@@ -1328,18 +1325,11 @@ class TestAdvancedArrayOperations:
         assert stack[0] == [4, 5, 6]
 
     @pytest.mark.asyncio
-    async def test_rotate(self) -> None:
-        """Test ROTATE operation."""
+    async def test_rotate_is_gone(self) -> None:
+        """Tombstone: ROTATE dropped (no-sibling classic, owner decision — matches rs)."""
         interp = StandardInterpreter()
-        await interp.run("""
-            ['a' 'b' 'c' 'd'] ROTATE
-            ['b'] ROTATE
-            [] ROTATE
-        """)
-        stack = interp.get_stack()
-        assert stack[0] == ["d", "a", "b", "c"]
-        assert stack[1] == ["b"]
-        assert stack[2] == []
+        with pytest.raises(Exception, match="ROTATE"):
+            await interp.run("[1 2 3] ROTATE")
 
     @pytest.mark.asyncio
     async def test_array_predicate(self) -> None:
@@ -1356,14 +1346,11 @@ class TestAdvancedArrayOperations:
         assert stack[2] is False
 
     @pytest.mark.asyncio
-    async def test_shuffle(self) -> None:
-        """Test SHUFFLE operation."""
+    async def test_shuffle_is_gone(self) -> None:
+        """Tombstone: SHUFFLE dropped (no-sibling classic, owner decision — matches rs)."""
         interp = StandardInterpreter()
-        await interp.run("""
-            [0 1 2 3 4 5 6] SHUFFLE
-        """)
-        stack = interp.get_stack()
-        assert len(stack[0]) == 7
+        with pytest.raises(Exception, match="SHUFFLE"):
+            await interp.run("[1 2 3] SHUFFLE")
 
     @pytest.mark.asyncio
     async def test_sort(self) -> None:
@@ -1555,14 +1542,11 @@ class TestSpecialAndMiscOperations:
         assert stack[0] is not None
 
     @pytest.mark.asyncio
-    async def test_re_match_group(self) -> None:
-        """Test RE-MATCH-GROUP operation."""
+    async def test_re_match_group_is_gone(self) -> None:
+        """Tombstone: RE-MATCH-GROUP dropped (RE-MATCH returns the groups array directly)."""
         interp = StandardInterpreter()
-        await interp.run("""
-            "123message456" "\\d{3}(.*)\\d{3}" RE-MATCH 1 RE-MATCH-GROUP
-        """)
-        stack = interp.get_stack()
-        assert stack[0] == "message"
+        with pytest.raises(Exception, match="RE-MATCH-GROUP"):
+            await interp.run("'ab' '(a)' RE-MATCH 1 RE-MATCH-GROUP")
 
     @pytest.mark.asyncio
     async def test_re_match_all(self) -> None:
@@ -1889,19 +1873,11 @@ class TestProfiling:
     """Test profiling operations."""
 
     @pytest.mark.asyncio
-    async def test_profiling(self) -> None:
-        """Test PROFILE operations."""
+    async def test_profiling_is_gone(self) -> None:
+        """Tombstone: PROFILE-* dropped (runtime tooling, owner decision — matches rs)."""
         interp = StandardInterpreter()
-        await interp.run("""
-            PROFILE-START
-            [1 6 "DUP 1 +" TIMES-RUN]
-            PROFILE-END DROP
-            PROFILE-DATA
-        """)
-        stack = interp.get_stack()
-        profile_data = stack[-1]
-        assert profile_data["word_counts"][0]["word"] == "1"
-        assert profile_data["word_counts"][0]["count"] == 7
+        with pytest.raises(Exception, match="PROFILE-START"):
+            await interp.run("PROFILE-START")
 
 
 class TestParallelOperations:

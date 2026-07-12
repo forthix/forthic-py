@@ -44,7 +44,7 @@ String manipulation and processing operations with regex and URL encoding suppor
 "hello world" " " SPLIT
 ["hello" "world"] " " JOIN
 "Hello" LOWERCASE
-"test@example.com" "(@.+)" RE-MATCH 1 RE-MATCH-GROUP
+"test@example.com" "(@.+)" RE-MATCH
             """,
         )
 
@@ -399,13 +399,6 @@ String manipulation and processing operations with regex and URL encoding suppor
             for m in re_pattern.finditer(string):
                 matches.append(m.group(1) if re_pattern.groups >= 1 else m.group(0))
         return matches
-
-    @WordDecorator("( match:any num:number -- result:any )", "Get capture group from regex match", "RE-MATCH-GROUP")
-    async def RE_MATCH_GROUP(self, match: Any, num: int) -> Any:
-        result = None
-        if match:
-            result = match[num]
-        return result
 
     # ==================
     # URL Encoding

@@ -5,7 +5,6 @@ Provides array manipulation including mapping, filtering, and grouping.
 
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -52,7 +51,7 @@ Array and collection operations for manipulating arrays and records.
 - Transform: MAP, REVERSE
 - Combine: APPEND, ZIP, ZIP-WITH
 - Filter: FILTER, FIND, COUNT, UNIQUE, UNIQUE-BY, DIFFERENCE, INTERSECTION, UNION
-- Sort: SORT, SORT-BY, SORT-U, MIN-BY, MAX-BY, SHUFFLE, ROTATE
+- Sort: SORT, SORT-BY, SORT-U, MIN-BY, MAX-BY
 - Group: BY-FIELD, GROUP-BY-FIELD, GROUP-BY, GROUPS-OF
 - Utility: TIMES-RUN, FOREACH, REDUCE, UNPACK, FLATTEN, NUMBERED, MAP-AT
 
@@ -391,20 +390,6 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return container
 
-    @WordDecorator("( container:any -- container:any )", "Rotate container by moving last element to front")
-    async def ROTATE(self, container: Any) -> Any:
-        if container is None:
-            return container
-
-        if isinstance(container, list):
-            if len(container) > 0:
-                result = container.copy()
-                val = result.pop()
-                result.insert(0, val)
-                return result
-
-        return container
-
     @ForthicDirectWord("( container:any -- elements:any )", "Unpack array or record elements onto stack")
     async def UNPACK(self, interp: Interpreter) -> None:
         container = interp.stack_pop()
@@ -545,16 +530,20 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         interp.stack_push(result)
 
-    @WordDecorator("( array:any[] -- array:any[] )", "Remove duplicates from array")
-    async def UNIQUE(self, array: list) -> list:
-        if array is None:
+    @WordDecorator("( array:any[] -- array:any[] )", "Remove duplicates from array (structural equality; keeps first occurrence)")
+    async def UNIQUE(self, array: Any) -> Any:
+        if not isinstance(array, list):
             return array
-
-        if isinstance(array, list):
-            result = list(dict.fromkeys(array))  # Preserves order in Python 3.7+
-            return result
-
-        return array
+        # Structural dedupe via compact JSON keys (dict.fromkeys raised on
+        # unhashable elements like records) — same policy as UNIQUE-BY/SORT-U
+        seen = set()
+        result = []
+        for item in array:
+            key = to_compact_json(item)
+            if key not in seen:
+                seen.add(key)
+                result.append(item)
+        return result
 
     @staticmethod
     def _set_op(lcontainer: Any, rcontainer: Any, keep: bool) -> Any:
@@ -931,19 +920,6 @@ Several words support options via the ~> operator using syntax: [.option_name va
             result = sort_with_key_func(comparator)
 
         return result
-
-    @WordDecorator("( array:any[] -- array:any[] )", "Shuffle array randomly")
-    async def SHUFFLE(self, array: list) -> list:
-        if array is None:
-            return array
-
-        result = array.copy()
-        random.shuffle(result)
-        return result
-
-    # ==================
-    # Group
-    # ==================
 
     @WordDecorator("( items:any[] forthic:string -- indexed:any )", "Create index mapping from array indices to values")
     async def INDEX(self, items: list, forthic: str) -> dict:

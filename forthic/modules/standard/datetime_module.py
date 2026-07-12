@@ -270,20 +270,34 @@ TODAY 7 ADD-DAYS
             return
 
         # If it's a number, treat as Unix timestamp (seconds)
-        if isinstance(item, (int, float)):
+        if isinstance(item, (int, float)) and not isinstance(item, bool):
             dt = datetime.fromtimestamp(item, tz=tz)
             interp.stack_push(dt)
             return
 
-        # Otherwise, parse as string
-        str_val = str(item).strip()
+        # A Date is midnight in the interpreter timezone
+        if isinstance(item, date):
+            interp.stack_push(datetime(item.year, item.month, item.day, tzinfo=tz))
+            return
+
+        if not isinstance(item, str):
+            interp.stack_push(None)
+            return
+
+        str_val = item.strip()
 
         try:
-            # Try parsing as ISO datetime string
-            dt = datetime.fromisoformat(str_val)
-            # If no timezone info, assume interpreter's timezone
+            # ISO datetime string ('Z' normalized for py<3.11 parity)
+            dt = datetime.fromisoformat(str_val.replace("Z", "+00:00").replace("z", "+00:00"))
             if dt.tzinfo is None:
+                # No zone: a wall clock in the interpreter's timezone
                 dt = dt.replace(tzinfo=tz)
+            else:
+                # Trailing-Z / explicit-offset strings denote INSTANTS:
+                # resolve them into the interpreter timezone (consistent
+                # with >DATE's #35 rule; sanctioned divergence from ts,
+                # which nulls Z-strings and reinterprets offset wall-clocks)
+                dt = dt.astimezone(tz)
             interp.stack_push(dt)
         except (ValueError, TypeError):
             interp.stack_push(None)

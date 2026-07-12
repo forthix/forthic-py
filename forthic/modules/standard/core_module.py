@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
-from ...errors import IntentionalStopError, InvalidVariableNameError
+from ...errors import IntentionalStopError, InvalidVariableNameError, UnknownVariableError
 from ...module import Variable
 from ...utils import is_truthy, run_to_outcome, to_compact_json, to_forthic_string
 from ...word_options import WordOptions
@@ -34,12 +34,11 @@ Essential interpreter operations for stack manipulation, variables, control flow
 ## Categories
 - Stack: DROP, DUP, SWAP
 - Variables: VARIABLES, !, @, !@
-- Module: EXPORT, USE-MODULES
+- Module: USE-MODULES
 - Execution: RUN
 - Control: NOP, IF, IF-RUN, WHEN, DEFAULT, DEFAULT-RUN, NULL
 - Predicates: ARRAY?, NULL?, EMPTY?, STRING?, NUMBER?, RECORD?
 - Options: ~> (converts array to WordOptions)
-- Profiling: PROFILE-START, PROFILE-TIMESTAMP, PROFILE-END, PROFILE-DATA
 - String: INTERPOLATE, PRINT
 - Debug: PEEK!, STACK!
 
@@ -149,11 +148,19 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
             var_obj = variable
         var_obj.set_value(value)
 
-    @ForthicDirectWord("( variable:any -- value:any )", "Gets variable value (auto-creates if string name)", "@")
+    @ForthicDirectWord(
+        "( variable:any -- value:any )",
+        "Gets variable value. READ-ONLY: an unknown variable name is an error and creates nothing — only ! and !@ get-or-create.",
+        "@",
+    )
     async def at(self, interp: Interpreter) -> None:
         variable = interp.stack_pop()
         if isinstance(variable, str):
-            var_obj = CoreModule._get_or_create_variable(interp, variable)
+            var_obj = interp.find_variable(variable)
+            if var_obj is None:
+                raise UnknownVariableError(
+                    interp.get_top_input_string(), variable, interp.get_string_location()
+                )
         else:
             var_obj = variable
         interp.stack_push(var_obj.get_value())
@@ -187,11 +194,6 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
     # ==================
     # Module Operations
     # ==================
-
-    @ForthicDirectWord("( names:list -- )", "Exports words from current module")
-    async def EXPORT(self, interp: Interpreter) -> None:
-        names = interp.stack_pop()
-        interp.cur_module().add_exportable(names)
 
     @ForthicDirectWord(
         "( names:string[] [options:WordOptions] -- )",
@@ -423,44 +425,6 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
     )
     async def tilde_gt(self, array: list) -> WordOptions:
         return WordOptions(array)
-
-    # ==================
-    # Profiling
-    # ==================
-
-    @ForthicDirectWord("( -- )", "Starts profiling word execution", "PROFILE-START")
-    async def PROFILE_START(self, interp: Interpreter) -> None:
-        interp.start_profiling()
-
-    @ForthicDirectWord("( -- )", "Stops profiling word execution", "PROFILE-END")
-    async def PROFILE_END(self, interp: Interpreter) -> None:
-        interp.stop_profiling()
-
-    @ForthicDirectWord("( label:str -- )", "Records profiling timestamp with label", "PROFILE-TIMESTAMP")
-    async def PROFILE_TIMESTAMP(self, interp: Interpreter) -> None:
-        label = interp.stack_pop()
-        interp.add_timestamp(label)
-
-    @ForthicDirectWord(
-        "( -- profile_data:dict )", "Returns profiling data (word counts and timestamps)", "PROFILE-DATA"
-    )
-    async def PROFILE_DATA(self, interp: Interpreter) -> None:
-        histogram = interp.word_histogram()
-        timestamps = interp.profile_timestamps()
-
-        result: dict[str, list] = {"word_counts": [], "timestamps": []}
-
-        for val in histogram:
-            rec = {"word": val["word"], "count": val["count"]}
-            result["word_counts"].append(rec)
-
-        prev_time = 0.0
-        for t in timestamps:
-            rec = {"label": t["label"], "time_ms": t["time_ms"], "delta": t["time_ms"] - prev_time}
-            prev_time = t["time_ms"]
-            result["timestamps"].append(rec)
-
-        interp.stack_push(result)
 
     # ==================
     # String Operations

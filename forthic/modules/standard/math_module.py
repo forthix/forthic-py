@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
+from ...utils import is_truthy
 from .array_module import MAX_MATERIALIZED_ELEMENTS
 
 
@@ -30,7 +31,7 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
 - Arithmetic: +, -, *, /, ADD, SUBTRACT, MULTIPLY, DIVIDE, MOD
 - Aggregates: MEAN, MAX, MIN, SUM
 - Type conversion: >INT, >FLOAT, >FIXED, ROUND
-- Special values: INFINITY, UNIFORM-RANDOM
+- Constants (py extensions): PI, E
 - Math functions: ABS, SQRT, FLOOR, CEIL, CLAMP
 
 ## Examples
@@ -38,7 +39,6 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
 [1 2 3 4] SUM
 [10 20 30] MEAN
 3.7 ROUND
-0 100 UNIFORM-RANDOM
             """,
         )
 
@@ -93,7 +93,10 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
 
     @WordDecorator("( items:any[] -- mean:any )", "Calculate mean of array (handles numbers, strings, objects)")
     async def MEAN(self, items: Any) -> Any:
-        if not items or (isinstance(items, list) and len(items) == 0):
+        # Falsy input (JS truthiness) or an empty array is 0; a truthy
+        # non-array passes through as-is (including empty records, which
+        # are truthy under the contract)
+        if not is_truthy(items) or (isinstance(items, list) and len(items) == 0):
             return 0
 
         if not isinstance(items, list):
@@ -129,12 +132,12 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
         # Case 3: Objects - field-wise mean
         if isinstance(first, dict):
             result_dict: dict[str, Any] = {}
-            all_keys: set[str] = set()
+            all_keys: dict[str, bool] = {}
 
-            # Collect all keys
+            # Collect all keys in first-seen (insertion) order
             for obj in filtered:
                 for key in obj.keys():
-                    all_keys.add(key)
+                    all_keys[key] = True
 
             # Compute mean for each key
             for key in all_keys:
@@ -302,18 +305,6 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
     # Special Values
     # ==================
 
-    @WordDecorator("( -- infinity:number )", "Push Infinity value")
-    async def INFINITY(self) -> float:
-        return float("inf")
-
-    @WordDecorator(
-        "( low:number high:number -- random:number )", "Generate random number in range [low, high)", "UNIFORM-RANDOM"
-    )
-    async def UNIFORM_RANDOM(self, low: float | int, high: float | int) -> float:
-        import random
-
-        return random.random() * (high - low) + low
-
     # ==================
     # Math Functions
     # ==================
@@ -365,10 +356,10 @@ Mathematical operations and utilities including arithmetic, aggregation, and con
     # Constants (from original implementation)
     # ==================
 
-    @WordDecorator("( -- pi:float )", "Push mathematical constant pi")
+    @WordDecorator("( -- pi:float )", "Push mathematical constant pi (py extension — pending upstreaming to ts/rs)")
     async def PI(self) -> float:
         return math.pi
 
-    @WordDecorator("( -- e:float )", "Push mathematical constant e")
+    @WordDecorator("( -- e:float )", "Push mathematical constant e (py extension — pending upstreaming to ts/rs)")
     async def E(self) -> float:
         return math.e
