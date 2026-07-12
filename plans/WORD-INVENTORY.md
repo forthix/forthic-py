@@ -344,7 +344,23 @@ options + rendering, pushes nothing. Deletes py's bare-dot grammar and its
 variable-minting lookup (core_module.py:291-342). py has no `{.var}@`
 grammar — nothing to remove there.
 
-**Batch 5 — math & datetime round-out: TODO**
+**Batch 5 — math & datetime round-out: DONE (feat/word-batch5)**
+RANGE (inclusive, empty on start>end, 10M bound — never existed in py),
+FORMAT-FIXED (>FIXED dropped; Decimal ROUND_HALF_UP over the binary
+double pins JS toFixed ties — py's f-string is ties-to-even; digits
+0..=100 and non-numeric ERROR), SQRT negative → NaN (was ValueError),
+CLAMP NaN propagation (py min/max are order-dependent with NaN), MOD
+converted to JS truncated modulo (py's floored % takes the divisor's
+sign), ROUND to JS Math.round (halves toward +∞; py round() is
+banker's), PRODUCT non-numeric elements → null (py * would do STRING
+REPETITION), AM/PM now adjust DateTimes too (non-times pass through
+unchanged), DAYS-BETWEEN (SUBTRACT-DATES dropped — the LAST classic
+drop), YEAR/MONTH (1-based)/DAY-OF-WEEK (ISO 1-7, strings null), >DATE
+rewritten to the #35 contract (trim; no-zone/offset strings AS WRITTEN;
+trailing-Z instants in the INTERPRETER tz; month-name forms; strict
+otherwise — the old dateutil fallback accepted '20240115'), USE-MODULES
+options (.prefixed self-prefix, explicit pair wins, non-array errors).
+Spec: tests/unit/core/test_word_batch5.py. Original spec:
 RANGE (inclusive; EMPTY if start > end; 10M allocation bound),
 FORMAT-FIXED (drop >FIXED; contract is JS toFixed: half-AWAY-from-zero
 ties — Python's f-string formatting is half-even, so the naive

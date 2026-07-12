@@ -245,9 +245,9 @@ class TestConverters:
         assert interp.stack_pop() == 2.0
 
     @pytest.mark.asyncio
-    async def test_to_fixed(self, interp):
-        """Test >FIXED converter."""
-        await interp.run("22 7 / 2 >FIXED")
+    async def test_format_fixed(self, interp):
+        """Test FORMAT-FIXED converter."""
+        await interp.run("22 7 / 2 FORMAT-FIXED")
         assert interp.stack_pop() == "3.14"
 
 

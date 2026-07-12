@@ -287,18 +287,20 @@ class Interpreter:
         self._registered_modules[module.name] = module
         module.set_interp(self)
 
-    def use_modules(self, names: list[Any]) -> None:
+    def use_modules(self, names: list[Any], prefixed: bool = False) -> None:
         """Import modules into app module.
 
-        If names is a list of strings, import each without prefix.
-        If names is a list of [name, prefix] pairs, use specified prefix.
+        Entries are 'name' (unprefixed) or ['name', 'prefix'] pairs. With
+        prefixed=True, plain names self-prefix ('greet' imports as
+        greet.WORD); an explicit pair prefix ALWAYS beats the option.
         """
         for name in names:
             module_name = name
-            prefix = ""
             if isinstance(name, list):
                 module_name = name[0]
                 prefix = name[1]
+            else:
+                prefix = module_name if prefixed else ""
             module = self.find_module(module_name)
             self.get_app_module().import_module(prefix, module, self)
 

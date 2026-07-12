@@ -193,11 +193,26 @@ variables, read-only. Options via the ~> operator: [.option_name value ...] ~> W
         names = interp.stack_pop()
         interp.cur_module().add_exportable(names)
 
-    @ForthicDirectWord("( names:list -- )", "Imports modules by name", "USE-MODULES")
+    @ForthicDirectWord(
+        "( names:string[] [options:WordOptions] -- )",
+        "Imports modules by name. Entries are 'name' or ['name' 'prefix']; [.prefixed TRUE] "
+        "self-prefixes plain names (an explicit pair prefix always wins). Unknown names error.",
+        "USE-MODULES",
+    )
     async def USE_MODULES(self, interp: Interpreter) -> None:
+        options_dict = {}
+        if len(interp.get_stack()) > 0:
+            top = interp.stack_peek()
+            if isinstance(top, WordOptions):
+                opts = interp.stack_pop()
+                options_dict = opts.to_dict()
+
         names = interp.stack_pop()
-        if names:
-            interp.use_modules(names)
+        if names is None:
+            return
+        if not isinstance(names, list):
+            raise ValueError("USE-MODULES requires an array of module names.")
+        interp.use_modules(names, prefixed=bool(options_dict.get("prefixed")))
 
     # ==================
     # Control Flow

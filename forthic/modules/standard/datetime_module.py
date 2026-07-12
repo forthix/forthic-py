@@ -78,13 +78,9 @@ TODAY 7 ADD-DAYS
         """Convert time to AM."""
         t = interp.stack_pop()
 
-        if t is None:
-            interp.stack_push(None)
-            return
-        if not isinstance(t, time):
-            interp.stack_push(t)
-            return
-        if t.hour >= 12:
+        # Time and DateTime adjust; everything else passes through
+        # UNCHANGED (not null)
+        if isinstance(t, (time, datetime)) and t.hour >= 12:
             interp.stack_push(t.replace(hour=t.hour - 12))
         else:
             interp.stack_push(t)
@@ -94,13 +90,9 @@ TODAY 7 ADD-DAYS
         """Convert time to PM."""
         t = interp.stack_pop()
 
-        if t is None:
-            interp.stack_push(None)
-            return
-        if not isinstance(t, time):
-            interp.stack_push(t)
-            return
-        if t.hour < 12:
+        # Time and DateTime adjust; everything else passes through
+        # UNCHANGED (not null)
+        if isinstance(t, (time, datetime)) and t.hour < 12:
             interp.stack_push(t.replace(hour=t.hour + 12))
         else:
             interp.stack_push(t)
@@ -158,14 +150,16 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(None)
 
-    @ForthicDirectWord("( item -- date )", "Convert string or datetime to date", ">DATE")
+    @ForthicDirectWord(
+        "( item -- date )",
+        "Convert string or datetime to date. Strings: ISO forms without a zone (or with an "
+        "explicit numeric offset) take the date AS WRITTEN; trailing-Z instants resolve in the "
+        "INTERPRETER timezone; month-name forms parse; anything else is null (strict).",
+        ">DATE",
+    )
     async def to_DATE(self, interp: Interpreter) -> None:
-        """Convert item to date object."""
+        """Convert item to date object (the ts #35 contract)."""
         item = interp.stack_pop()
-
-        if item is None:
-            interp.stack_push(None)
-            return
 
         # If already a date, return it
         if isinstance(item, date) and not isinstance(item, datetime):
@@ -177,26 +171,84 @@ TODAY 7 ADD-DAYS
             interp.stack_push(item.date())
             return
 
-        # Otherwise, parse as string
-        str_val = str(item).strip()
-
-        # Try standard ISO format (YYYY-MM-DD)
-        try:
-            interp.stack_push(date.fromisoformat(str_val))
+        # Only strings parse (`0 >DATE` stays NULL — deliberate ts falsy
+        # asymmetry with `0 >DATETIME` = epoch)
+        if not isinstance(item, str):
+            interp.stack_push(None)
             return
-        except (ValueError, TypeError):
-            pass
 
-        # Try parsing as a more flexible format using dateutil if available
-        try:
-            from dateutil import parser
-            parsed = parser.parse(str_val)
-            interp.stack_push(parsed.date())
-            return
-        except (ImportError, ValueError, TypeError):
-            pass
+        str_val = item.strip()
 
+        # Trailing-Z instants are moments in time: their calendar date
+        # depends on the INTERPRETER timezone (the #35 rule)
+        if re.search(r"[Zz]$", str_val):
+            try:
+                instant = datetime.fromisoformat(str_val.replace("Z", "+00:00").replace("z", "+00:00"))
+                interp.stack_push(instant.astimezone(interp.get_timezone()).date())
+                return
+            except ValueError:
+                interp.stack_push(None)
+                return
+
+        # ISO date / ISO datetime without zone or with an explicit numeric
+        # offset: the date AS WRITTEN (offset ignored, like ts PlainDate.from)
+        iso_date = re.match(r"^(\d{4})-(\d{2})-(\d{2})", str_val)
+        if iso_date:
+            try:
+                interp.stack_push(
+                    date(int(iso_date.group(1)), int(iso_date.group(2)), int(iso_date.group(3)))
+                )
+                return
+            except ValueError:
+                interp.stack_push(None)
+                return
+
+        # Month-name forms: "Oct 21, 2020" / "October 21, 2020"
+        for fmt in ("%b %d, %Y", "%B %d, %Y"):
+            try:
+                interp.stack_push(datetime.strptime(str_val, fmt).date())
+                return
+            except ValueError:
+                continue
+
+        # No new Date() leniency beyond this — strict by design
         interp.stack_push(None)
+
+    @ForthicDirectWord(
+        "( date_or_datetime -- year )",
+        "Year of a Date or DateTime; anything else (including strings) is null.",
+        "YEAR",
+    )
+    async def YEAR(self, interp: Interpreter) -> None:
+        value = interp.stack_pop()
+        if isinstance(value, (date, datetime)):
+            interp.stack_push(value.year)
+        else:
+            interp.stack_push(None)
+
+    @ForthicDirectWord(
+        "( date_or_datetime -- month )",
+        "Month of a Date or DateTime, 1-based (1=January); anything else is null.",
+        "MONTH",
+    )
+    async def MONTH(self, interp: Interpreter) -> None:
+        value = interp.stack_pop()
+        if isinstance(value, (date, datetime)):
+            interp.stack_push(value.month)
+        else:
+            interp.stack_push(None)
+
+    @ForthicDirectWord(
+        "( date_or_datetime -- day )",
+        "ISO day of week of a Date or DateTime (1=Monday .. 7=Sunday, never 0); anything else is null.",
+        "DAY-OF-WEEK",
+    )
+    async def DAY_OF_WEEK(self, interp: Interpreter) -> None:
+        value = interp.stack_pop()
+        if isinstance(value, (date, datetime)):
+            interp.stack_push(value.isoweekday())
+        else:
+            interp.stack_push(None)
 
     @ForthicDirectWord("( str_or_timestamp -- datetime )", "Convert string or timestamp to datetime", ">DATETIME")
     async def to_DATETIME(self, interp: Interpreter) -> None:
@@ -357,8 +409,8 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(d + timedelta(days=num_days))
 
-    @ForthicDirectWord("( date1 date2 -- num_days )", "Get difference in days between dates (date1 - date2)", "SUBTRACT-DATES")
-    async def SUBTRACT_DATES(self, interp: Interpreter) -> None:
+    @ForthicDirectWord("( date1 date2 -- num_days )", "Get difference in days between dates (date1 - date2). Pure rename of classic SUBTRACT-DATES.", "DAYS-BETWEEN")
+    async def DAYS_BETWEEN(self, interp: Interpreter) -> None:
         """Calculate difference in days between two dates."""
         date2 = interp.stack_pop()
         date1 = interp.stack_pop()
