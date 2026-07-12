@@ -218,7 +218,16 @@ the standard modules instead. Original spec:
   against defaulted names containing `_`.
 - Delete math's duplicate `<` `<=` `>` `>=` registrations.
 
-**Batch 1 — control flow & predicates: TODO**
+**Batch 1 — control flow & predicates: DONE (feat/word-batch1)**
+IF (pure value selection, is_truthy), IF-RUN (null branch no-op), WHEN,
+RUN (classic INTERPRET dropped), DEFAULT-RUN (classic *DEFAULT dropped),
+NULL?, EMPTY?, STRING?, NUMBER? (Infinity yes, NaN no, py bools excluded),
+RECORD?, ANY? (false on empty, errors on non-array), ALL? (true on
+empty), CONTAINS? (haystack-first via values_equal; classic IN dropped),
+OR/AND strictly two-operand (array operand errors toward ANY?/ALL?;
+two-value form keeps ts's raw-operand ||/&& selection via is_truthy).
+PEEK!/STACK! verified (Phase 1 had already pinned IntentionalStop).
+Spec: tests/unit/core/test_word_batch1.py. Original spec:
 IF (pure value selection), IF-RUN, WHEN, RUN (drop INTERPRET), DEFAULT-RUN
 (drop *DEFAULT), NULL?, EMPTY?, STRING?, NUMBER? (Infinity yes, NaN no),
 RECORD?, ANY? (false on empty), ALL? (true on empty), CONTAINS?

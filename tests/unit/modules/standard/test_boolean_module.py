@@ -64,9 +64,9 @@ class TestLogicOperations:
         """Test logical operators."""
         await interp.run("""
             FALSE FALSE OR
-            [FALSE FALSE TRUE FALSE] OR
+            [FALSE FALSE TRUE FALSE] ANY?
             FALSE TRUE AND
-            [FALSE FALSE TRUE FALSE] AND
+            [FALSE FALSE TRUE FALSE] ALL?
             FALSE NOT
         """)
         stack = interp.get_stack().get_items()
@@ -89,15 +89,15 @@ class TestLogicOperations:
         assert interp.stack_pop() is True
 
     @pytest.mark.asyncio
-    async def test_or_with_array(self, interp):
-        """Test OR with array of booleans."""
-        await interp.run("[FALSE FALSE FALSE] OR")
+    async def test_any_q_with_array(self, interp):
+        """ANY? replaces OR's old array form (OR is strictly two-operand)."""
+        await interp.run("[FALSE FALSE FALSE] ANY?")
         assert interp.stack_pop() is False
 
-        await interp.run("[TRUE FALSE FALSE] OR")
+        await interp.run("[TRUE FALSE FALSE] ANY?")
         assert interp.stack_pop() is True
 
-        await interp.run("[FALSE TRUE FALSE] OR")
+        await interp.run("[FALSE TRUE FALSE] ANY?")
         assert interp.stack_pop() is True
 
     @pytest.mark.asyncio
@@ -113,15 +113,15 @@ class TestLogicOperations:
         assert interp.stack_pop() is False
 
     @pytest.mark.asyncio
-    async def test_and_with_array(self, interp):
-        """Test AND with array of booleans."""
-        await interp.run("[TRUE TRUE TRUE] AND")
+    async def test_all_q_with_array(self, interp):
+        """ALL? replaces AND's old array form (AND is strictly two-operand)."""
+        await interp.run("[TRUE TRUE TRUE] ALL?")
         assert interp.stack_pop() is True
 
-        await interp.run("[TRUE FALSE TRUE] AND")
+        await interp.run("[TRUE FALSE TRUE] ALL?")
         assert interp.stack_pop() is False
 
-        await interp.run("[FALSE FALSE FALSE] AND")
+        await interp.run("[FALSE FALSE FALSE] ALL?")
         assert interp.stack_pop() is False
 
     @pytest.mark.asyncio
@@ -173,29 +173,35 @@ class TestMembershipOperations:
     """Test membership operations."""
 
     @pytest.mark.asyncio
-    async def test_in(self, interp):
-        """Test IN operator."""
+    async def test_contains_q(self, interp):
+        """Test CONTAINS? (haystack-first; classic item-first IN dropped)."""
         await interp.run("""
-            'alpha' ['beta' 'gamma'] IN
-            'alpha' ['beta' 'gamma' 'alpha'] IN
+            ['beta' 'gamma'] 'alpha' CONTAINS?
+            ['beta' 'gamma' 'alpha'] 'alpha' CONTAINS?
         """)
         stack = interp.get_stack().get_items()
         assert stack[0] is False
         assert stack[1] is True
 
     @pytest.mark.asyncio
-    async def test_in_with_numbers(self, interp):
-        """Test IN with numbers."""
-        await interp.run("5 [1 2 3 4 5] IN")
+    async def test_classic_in_is_gone(self, interp):
+        """Tombstone: classic item-first IN dropped when CONTAINS? landed."""
+        with pytest.raises(Exception, match="IN"):
+            await interp.run("2 [1 2] IN")
+
+    @pytest.mark.asyncio
+    async def test_contains_q_with_numbers(self, interp):
+        """Test CONTAINS? with numbers."""
+        await interp.run("[1 2 3 4 5] 5 CONTAINS?")
         assert interp.stack_pop() is True
 
-        await interp.run("10 [1 2 3 4 5] IN")
+        await interp.run("[1 2 3 4 5] 10 CONTAINS?")
         assert interp.stack_pop() is False
 
     @pytest.mark.asyncio
-    async def test_in_with_empty_array(self, interp):
-        """Test IN with empty array."""
-        await interp.run("'test' [] IN")
+    async def test_contains_q_with_empty_array(self, interp):
+        """Test CONTAINS? with empty array."""
+        await interp.run("[] 'test' CONTAINS?")
         assert interp.stack_pop() is False
 
     @pytest.mark.asyncio

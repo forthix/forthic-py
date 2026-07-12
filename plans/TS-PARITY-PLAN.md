@@ -162,6 +162,13 @@ ruff + mypy for py310), plus cross-runtime smoke once wired.
     math's duplicate < <= > >= deleted; |REC@ removed (pulled forward
     from Batch 3 — it lied about its stack effect). Spec:
     tests/unit/core/test_word_batch0.py.
+  - **Batch 1 DONE (2026-07-12, feat/word-batch1).** IF/IF-RUN/WHEN,
+    RUN (INTERPRET dropped), DEFAULT-RUN (*DEFAULT dropped), the six
+    predicates (NULL?, EMPTY?, STRING?, NUMBER? incl. the py-specific
+    bool exclusion, RECORD?, plus existing ARRAY?), CONTAINS?
+    (haystack-first, values_equal; classic IN dropped), ANY?/ALL?,
+    OR/AND strictly two-operand. Spec:
+    tests/unit/core/test_word_batch1.py.
 - **Phase 4 — Interpolation redesign.** `${name}` contract into core;
   delete the bare-dot grammar (and `{.var}@` if present); PRINT shares.
   Port ts PR #41 / rs PR #15 directly.

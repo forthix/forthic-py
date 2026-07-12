@@ -6,6 +6,7 @@ Provides stack manipulation, variables, control flow, and module system operatio
 from __future__ import annotations
 
 import json
+import math
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -16,7 +17,7 @@ from ...decorators import DecoratedModule, ForthicDirectWord, register_module_do
 from ...decorators import ForthicWord as WordDecorator
 from ...errors import IntentionalStopError, InvalidVariableNameError
 from ...module import Variable
-from ...utils import run_to_outcome
+from ...utils import is_truthy, run_to_outcome
 from ...word_options import WordOptions
 
 
@@ -34,8 +35,9 @@ Essential interpreter operations for stack manipulation, variables, control flow
 - Stack: DROP, DUP, SWAP
 - Variables: VARIABLES, !, @, !@
 - Module: EXPORT, USE-MODULES
-- Execution: INTERPRET
-- Control: NOP, DEFAULT, *DEFAULT, NULL, ARRAY?
+- Execution: RUN
+- Control: NOP, IF, IF-RUN, WHEN, DEFAULT, DEFAULT-RUN, NULL
+- Predicates: ARRAY?, NULL?, EMPTY?, STRING?, NUMBER?, RECORD?
 - Options: ~> (converts array to WordOptions)
 - Profiling: PROFILE-START, PROFILE-TIMESTAMP, PROFILE-END, PROFILE-DATA
 - String: INTERPOLATE, PRINT
@@ -172,12 +174,16 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # Execution
     # ==================
 
-    @ForthicDirectWord("( string:str -- )", "Interprets Forthic string in current context")
-    async def INTERPRET(self, interp: Interpreter) -> None:
-        string = interp.stack_pop()
+    @ForthicDirectWord(
+        "( forthic:string -- )",
+        "Run a Forthic string in the current context. Whatever the forthic produces is left on the stack.",
+        "RUN",
+    )
+    async def RUN(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
         string_location = interp.get_string_location()
-        if string:
-            await interp.run(string, string_location)
+        if forthic:
+            await interp.run(forthic, string_location)
 
     # ==================
     # Module Operations
@@ -210,6 +216,81 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     async def ARRAY_q(self, value: Any) -> bool:
         return isinstance(value, list)
 
+    @WordDecorator("( value:any -- boolean:bool )", "Returns true if value is null", "NULL?")
+    async def NULL_q(self, value: Any) -> bool:
+        return value is None
+
+    @WordDecorator(
+        "( value:any -- boolean:bool )",
+        "Returns true if value is null, an empty string, or a container (array/record) with no entries",
+        "EMPTY?",
+    )
+    async def EMPTY_q(self, value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, (str, list, dict)):
+            return len(value) == 0
+        return False
+
+    @WordDecorator("( value:any -- boolean:bool )", "Returns true if value is a string", "STRING?")
+    async def STRING_q(self, value: Any) -> bool:
+        return isinstance(value, str)
+
+    @WordDecorator(
+        "( value:any -- boolean:bool )",
+        "Returns true if value is a number (Infinity is a number; NaN is not; booleans are not)",
+        "NUMBER?",
+    )
+    async def NUMBER_q(self, value: Any) -> bool:
+        if isinstance(value, bool):
+            return False
+        if isinstance(value, float):
+            return not math.isnan(value)
+        return isinstance(value, int)
+
+    @WordDecorator(
+        "( value:any -- boolean:bool )",
+        "Returns true if value is a plain record (not an array, not null)",
+        "RECORD?",
+    )
+    async def RECORD_q(self, value: Any) -> bool:
+        return isinstance(value, dict)
+
+    @WordDecorator(
+        "( bool:boolean then_value:any else_value:any -- chosen:any )",
+        "Pure value selection: push then_value if bool is truthy, else push else_value. "
+        "For lazy code execution use IF-RUN; for one-sided side effects use WHEN.",
+    )
+    async def IF(self, bool_val: Any, then_value: Any, else_value: Any) -> Any:
+        return then_value if is_truthy(bool_val) else else_value
+
+    @ForthicDirectWord(
+        "( bool:boolean then_forthic:string else_forthic:string -- )",
+        "Conditional code execution: if bool is truthy run then_forthic, otherwise run else_forthic. "
+        "Branches are Forthic strings; a null/empty branch is a no-op.",
+        "IF-RUN",
+    )
+    async def IF_RUN(self, interp: Interpreter) -> None:
+        else_forthic = interp.stack_pop()
+        then_forthic = interp.stack_pop()
+        bool_val = interp.stack_pop()
+        branch = then_forthic if is_truthy(bool_val) else else_forthic
+        if branch:
+            string_location = interp.get_string_location()
+            await interp.run(branch, string_location)
+
+    @ForthicDirectWord(
+        "( bool:boolean forthic:string -- )",
+        "If bool is truthy run forthic, otherwise do nothing. The forthic argument is always treated as code (executed in current context).",
+        "WHEN",
+    )
+    async def WHEN(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        bool_val = interp.stack_pop()
+        if is_truthy(bool_val) and forthic:
+            string_location = interp.get_string_location()
+            await interp.run(forthic, string_location)
+
     @WordDecorator(
         "( value:any default_value:any -- result:any )",
         "Returns value or default if value is None/empty string",
@@ -220,18 +301,17 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
         return value
 
     @ForthicDirectWord(
-        "( value:any default_forthic:str -- result:any )",
-        "Returns value or executes Forthic if value is None/empty string",
-        "*DEFAULT",
+        "( value:any forthic:string -- result:any )",
+        "Lazy default: returns value if non-empty, otherwise runs forthic and uses its result. The forthic is only evaluated when needed.",
+        "DEFAULT-RUN",
     )
-    async def star_DEFAULT(self, interp: Interpreter) -> None:
-        default_forthic = interp.stack_pop()
+    async def DEFAULT_RUN(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
         value = interp.stack_pop()
-
         if value is None or value == "":
             string_location = interp.get_string_location()
-            await interp.run(default_forthic, string_location)
-            # Result is already on stack from run()
+            await interp.run(forthic, string_location)
+            # The forthic's result is already on the stack
         else:
             interp.stack_push(value)
 

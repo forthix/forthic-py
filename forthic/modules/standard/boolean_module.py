@@ -8,9 +8,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    from ...interpreter import Interpreter
+    pass
 
-from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
+from ...decorators import DecoratedModule, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
 from ...utils import is_truthy, values_equal
 
@@ -28,14 +28,14 @@ Comparison, logic, and membership operations for boolean values and conditions.
 ## Categories
 - Comparison: ==, !=, <, <=, >, >=
 - Logic: OR, AND, NOT, XOR, NAND
-- Membership: IN, ANY, ALL
+- Membership: CONTAINS?, ANY, ALL, ANY?, ALL?
 - Conversion: >BOOL
 
 ## Examples
 5 3 >
 "hello" "hello" ==
-[1 2 3] [4 5 6] OR
-2 [1 2 3] IN
+FALSE TRUE OR
+[1 2 3] 2 CONTAINS?
             """,
         )
 
@@ -71,47 +71,27 @@ Comparison, logic, and membership operations for boolean values and conditions.
     # Logic
     # ==================
 
-    @ForthicDirectWord(
-        "( a:boolean b:boolean -- result:boolean ) OR ( bools:boolean[] -- result:boolean )",
-        "Logical OR of two values or array",
+    @WordDecorator(
+        "( a:boolean b:boolean -- result:boolean )",
+        "Logical OR of two values. For arrays use ANY?.",
         "OR",
     )
-    async def OR(self, interp: Interpreter) -> None:
-        b = interp.stack_pop()
+    async def OR(self, a: Any, b: Any) -> Any:
+        if isinstance(a, list) or isinstance(b, list):
+            raise ValueError("OR takes two values. For an array of booleans, use ANY?.")
+        # JS ||: first operand if truthy, else second
+        return a if is_truthy(a) else b
 
-        # Case 1: Array on top of stack
-        if isinstance(b, list):
-            for val in b:
-                if is_truthy(val):
-                    interp.stack_push(True)
-                    return
-            interp.stack_push(False)
-            return
-
-        # Case 2: Two values (JS ||: first operand if truthy, else second)
-        a = interp.stack_pop()
-        interp.stack_push(a if is_truthy(a) else b)
-
-    @ForthicDirectWord(
-        "( a:boolean b:boolean -- result:boolean ) OR ( bools:boolean[] -- result:boolean )",
-        "Logical AND of two values or array",
+    @WordDecorator(
+        "( a:boolean b:boolean -- result:boolean )",
+        "Logical AND of two values. For arrays use ALL?.",
         "AND",
     )
-    async def AND(self, interp: Interpreter) -> None:
-        b = interp.stack_pop()
-
-        # Case 1: Array on top of stack
-        if isinstance(b, list):
-            for val in b:
-                if not is_truthy(val):
-                    interp.stack_push(False)
-                    return
-            interp.stack_push(True)
-            return
-
-        # Case 2: Two values (JS &&: first operand if falsy, else second)
-        a = interp.stack_pop()
-        interp.stack_push(b if is_truthy(a) else a)
+    async def AND(self, a: Any, b: Any) -> Any:
+        if isinstance(a, list) or isinstance(b, list):
+            raise ValueError("AND takes two values. For an array of booleans, use ALL?.")
+        # JS &&: first operand if falsy, else second
+        return b if is_truthy(a) else a
 
     @WordDecorator("( bool:boolean -- result:boolean )", "Logical NOT")
     async def NOT(self, bool_val: Any) -> bool:
@@ -129,11 +109,35 @@ Comparison, logic, and membership operations for boolean values and conditions.
     # Membership
     # ==================
 
-    @WordDecorator("( item:any array:any[] -- in:boolean )", "Check if item is in array")
-    async def IN(self, item: Any, array: Any) -> bool:
-        if not isinstance(array, list):
+    @WordDecorator(
+        "( haystack:any[] needle:any -- bool:boolean )",
+        "Check if haystack array contains needle. Container-first arg order.",
+        "CONTAINS?",
+    )
+    async def CONTAINS_q(self, haystack: Any, needle: Any) -> bool:
+        if not isinstance(haystack, list):
             return False
-        return any(values_equal(item, element) for element in array)
+        return any(values_equal(needle, element) for element in haystack)
+
+    @WordDecorator(
+        "( bools:boolean[] -- result:boolean )",
+        "Returns true if any element of the array is truthy. False for empty array.",
+        "ANY?",
+    )
+    async def ANY_q(self, bools: Any) -> bool:
+        if not isinstance(bools, list):
+            raise ValueError("ANY? requires an array of booleans.")
+        return any(is_truthy(v) for v in bools)
+
+    @WordDecorator(
+        "( bools:boolean[] -- result:boolean )",
+        "Returns true if all elements of the array are truthy. True for empty array.",
+        "ALL?",
+    )
+    async def ALL_q(self, bools: Any) -> bool:
+        if not isinstance(bools, list):
+            raise ValueError("ALL? requires an array of booleans.")
+        return all(is_truthy(v) for v in bools)
 
     @WordDecorator("( items1:any[] items2:any[] -- any:boolean )", "Check if any item from items1 is in items2")
     async def ANY(self, items1: Any, items2: Any) -> bool:
