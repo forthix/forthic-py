@@ -35,12 +35,17 @@ String manipulation and processing operations with regex and URL encoding suppor
 - Shell-flavored: LINES, UNLINES, GREP, GREP-V, SED, CUT
 - Transform: LOWERCASE, UPPERCASE, STRIP, ASCII
 - Split/Join: SPLIT, JOIN, CONCAT
-- Pattern: REPLACE, RE_MATCH, RE_MATCH_ALL, RE_MATCH_GROUP
+- Pattern: REPLACE, RE-REPLACE, RE-MATCH, RE-MATCH-ALL, RE-MATCH?
 - Constants: /N, /R, /T
 
+## Note
+Regex patterns (RE-*, GREP, SED) are compiled and run as-is. A pathological
+pattern can backtrack catastrophically (ReDoS) and block execution, so patterns
+must come from a trusted source, not untrusted input.
+
 ## Examples
-"hello" "world" CONCAT
-["a" "b" "c"] CONCAT
+["hello" " " "world"] CONCAT
+"hello world" STR-LENGTH
 "hello world" " " SPLIT
 ["hello" "world"] " " JOIN
 "Hello" LOWERCASE
@@ -95,8 +100,8 @@ String manipulation and processing operations with regex and URL encoding suppor
         return result.replace(LITERAL_DOLLAR, "$")
 
     @WordDecorator(
-        "( str:string start:number end:number -- result:string )",
-        "Substring by JS String.slice semantics: negatives count from the end, out-of-range clamps, crossed range is empty. Char (code point) indices — host-native units.",
+        "( str:string start:number end:number -- substring:string )",
+        "Substring of str from start (inclusive) to end (exclusive), by character (code point) index. Indices clamp like String.slice (negatives count from the end; crossed range is empty).",
         "SUBSTR",
     )
     async def SUBSTR(self, string: Any, start: int, end: int) -> str:
@@ -129,7 +134,7 @@ String manipulation and processing operations with regex and URL encoding suppor
 
     @WordDecorator(
         "( str:string prefix:string -- bool:boolean )",
-        "Returns true if str starts with prefix.",
+        "Returns true if str begins with prefix.",
         "STARTS-WITH?",
     )
     async def STARTS_WITH_q(self, string: Any, prefix: Any) -> bool:
@@ -285,7 +290,7 @@ String manipulation and processing operations with regex and URL encoding suppor
 
     @WordDecorator(
         "( item:any -- string:string )",
-        "Convert item to string (JS semantics: null -> '', arrays comma-join, records -> compact JSON)",
+        "Convert item to string. Null renders as ''; records render as JSON; arrays comma-join their stringified elements.",
         ">STR",
     )
     async def to_STR(self, item: Any) -> str:
@@ -365,7 +370,7 @@ String manipulation and processing operations with regex and URL encoding suppor
 
     @WordDecorator(
         "( string:string text:string replace:string -- result:string )",
-        "Replace all occurrences of text with replace",
+        "Replace all literal occurrences of text with replace. For regex matching use RE-REPLACE.",
     )
     async def REPLACE(self, string: Any, text: Any, replace: Any) -> Any:
         # Fully literal on both sides (no regex, no backref surprises).

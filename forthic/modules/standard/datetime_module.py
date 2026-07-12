@@ -7,8 +7,9 @@ Categories:
 - Time adjustment: AM, PM
 - Conversion to: >TIME, >DATE, >DATETIME, AT
 - Conversion from: TIME>STR, DATE>STR, DATE>INT
+- Getters: YEAR, MONTH, DAY-OF-WEEK
 - Timestamps: >TIMESTAMP, TIMESTAMP>DATETIME
-- Date math: ADD-DAYS, SUBTRACT-DATES
+- Date math: ADD-DAYS, DAYS-BETWEEN
 
 Examples:
     TODAY
@@ -46,8 +47,9 @@ Date and time operations using Python's datetime with timezone support.
 - Time adjustment: AM, PM
 - Conversion to: >TIME, >DATE, >DATETIME, AT
 - Conversion from: TIME>STR, DATE>STR, DATE>INT
+- Getters: YEAR, MONTH, DAY-OF-WEEK
 - Timestamps: >TIMESTAMP, TIMESTAMP>DATETIME
-- Date math: ADD-DAYS, SUBTRACT-DATES
+- Date math: ADD-DAYS, DAYS-BETWEEN
 
 ## Examples
 TODAY
@@ -59,21 +61,21 @@ TODAY 7 ADD-DAYS
 """,
         )
 
-    @ForthicDirectWord("( -- date )", "Get current date", "TODAY")
+    @ForthicDirectWord("( -- date:date )", "Get current date", "TODAY")
     async def TODAY(self, interp: Interpreter) -> None:
         """Get current date in interpreter's timezone."""
         tz = interp.get_timezone()
         today = datetime.now(tz).date()
         interp.stack_push(today)
 
-    @ForthicDirectWord("( -- datetime )", "Get current datetime", "NOW")
+    @ForthicDirectWord("( -- datetime:datetime )", "Get current datetime", "NOW")
     async def NOW(self, interp: Interpreter) -> None:
         """Get current datetime in interpreter's timezone."""
         tz = interp.get_timezone()
         now = datetime.now(tz)
         interp.stack_push(now)
 
-    @ForthicDirectWord("( time -- time )", "Convert time to AM (subtract 12 from hour if >= 12)")
+    @ForthicDirectWord("( time:time -- time:time )", "Convert time to AM (subtract 12 from hour if >= 12)")
     async def AM(self, interp: Interpreter) -> None:
         """Convert time to AM."""
         t = interp.stack_pop()
@@ -85,7 +87,7 @@ TODAY 7 ADD-DAYS
         else:
             interp.stack_push(t)
 
-    @ForthicDirectWord("( time -- time )", "Convert time to PM (add 12 to hour if < 12)")
+    @ForthicDirectWord("( time:time -- time:time )", "Convert time to PM (add 12 to hour if < 12)")
     async def PM(self, interp: Interpreter) -> None:
         """Convert time to PM."""
         t = interp.stack_pop()
@@ -97,7 +99,7 @@ TODAY 7 ADD-DAYS
         else:
             interp.stack_push(t)
 
-    @ForthicDirectWord("( item -- time )", "Convert string or datetime to time", ">TIME")
+    @ForthicDirectWord("( item:any -- time:time )", "Convert string or datetime to time", ">TIME")
     async def to_TIME(self, interp: Interpreter) -> None:
         """Convert item to time object."""
         item = interp.stack_pop()
@@ -151,7 +153,7 @@ TODAY 7 ADD-DAYS
         interp.stack_push(None)
 
     @ForthicDirectWord(
-        "( item -- date )",
+        "( item:any -- date:date )",
         "Convert string or datetime to date. Strings: ISO forms without a zone (or with an "
         "explicit numeric offset) take the date AS WRITTEN; trailing-Z instants resolve in the "
         "INTERPRETER timezone; month-name forms parse; anything else is null (strict).",
@@ -215,7 +217,7 @@ TODAY 7 ADD-DAYS
         interp.stack_push(None)
 
     @ForthicDirectWord(
-        "( date_or_datetime -- year )",
+        "( date_or_datetime:any -- year:number )",
         "Year of a Date or DateTime; anything else (including strings) is null.",
         "YEAR",
     )
@@ -227,7 +229,7 @@ TODAY 7 ADD-DAYS
             interp.stack_push(None)
 
     @ForthicDirectWord(
-        "( date_or_datetime -- month )",
+        "( date_or_datetime:any -- month:number )",
         "Month of a Date or DateTime, 1-based (1=January); anything else is null.",
         "MONTH",
     )
@@ -239,7 +241,7 @@ TODAY 7 ADD-DAYS
             interp.stack_push(None)
 
     @ForthicDirectWord(
-        "( date_or_datetime -- day )",
+        "( date_or_datetime:any -- day:number )",
         "ISO day of week of a Date or DateTime (1=Monday .. 7=Sunday, never 0); anything else is null.",
         "DAY-OF-WEEK",
     )
@@ -250,7 +252,13 @@ TODAY 7 ADD-DAYS
         else:
             interp.stack_push(None)
 
-    @ForthicDirectWord("( str_or_timestamp -- datetime )", "Convert string or timestamp to datetime", ">DATETIME")
+    @ForthicDirectWord(
+        "( str_or_timestamp:any -- datetime:datetime )",
+        "Convert string or timestamp to a timezone-aware datetime. Zone-carrying strings "
+        "(trailing Z or an explicit numeric offset) denote INSTANTS and resolve into the "
+        "interpreter timezone; zone-less strings are wall clocks in the interpreter timezone.",
+        ">DATETIME",
+    )
     async def to_DATETIME(self, interp: Interpreter) -> None:
         """Convert item to datetime object."""
         item = interp.stack_pop()
@@ -302,7 +310,7 @@ TODAY 7 ADD-DAYS
         except (ValueError, TypeError):
             interp.stack_push(None)
 
-    @ForthicDirectWord("( date time -- datetime )", "Combine date and time into datetime", "AT")
+    @ForthicDirectWord("( date:date time:time -- datetime:datetime )", "Combine date and time into datetime", "AT")
     async def AT(self, interp: Interpreter) -> None:
         """Combine date and time into datetime."""
         t = interp.stack_pop()
@@ -327,7 +335,7 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(dt)
 
-    @ForthicWord("( time -- str )", "Convert time to HH:MM string", "TIME>STR")
+    @ForthicWord("( time:time -- str:string )", "Convert time to HH:MM string", "TIME>STR")
     async def TIME_to_STR(self, t: Any) -> str:
         """Convert time to string."""
         if t is None or not isinstance(t, time):
@@ -335,7 +343,7 @@ TODAY 7 ADD-DAYS
 
         return f"{t.hour:02d}:{t.minute:02d}"
 
-    @ForthicWord("( date -- str )", "Convert date to YYYY-MM-DD string", "DATE>STR")
+    @ForthicWord("( date:date -- str:string )", "Convert date to YYYY-MM-DD string", "DATE>STR")
     async def DATE_to_STR(self, d: Any) -> str:
         """Convert date to string."""
         if d is None:
@@ -350,7 +358,7 @@ TODAY 7 ADD-DAYS
 
         return d.isoformat()
 
-    @ForthicWord("( date -- int )", "Convert date to integer (YYYYMMDD)", "DATE>INT")
+    @ForthicWord("( date:date -- int:number )", "Convert date to integer (YYYYMMDD)", "DATE>INT")
     async def DATE_to_INT(self, d: Any) -> Any:
         """Convert date to integer."""
         if d is None:
@@ -365,7 +373,7 @@ TODAY 7 ADD-DAYS
 
         return d.year * 10000 + d.month * 100 + d.day
 
-    @ForthicDirectWord("( datetime -- timestamp )", "Convert datetime to Unix timestamp (seconds)", ">TIMESTAMP")
+    @ForthicDirectWord("( datetime:datetime -- timestamp:number )", "Convert datetime to Unix timestamp (seconds)", ">TIMESTAMP")
     async def to_TIMESTAMP(self, interp: Interpreter) -> None:
         """Convert datetime to Unix timestamp."""
         dt = interp.stack_pop()
@@ -387,7 +395,7 @@ TODAY 7 ADD-DAYS
         timestamp = int(dt.timestamp())
         interp.stack_push(timestamp)
 
-    @ForthicDirectWord("( timestamp -- datetime )", "Convert Unix timestamp (seconds) to datetime", "TIMESTAMP>DATETIME")
+    @ForthicDirectWord("( timestamp:number -- datetime:datetime )", "Convert Unix timestamp (seconds) to datetime", "TIMESTAMP>DATETIME")
     async def TIMESTAMP_to_DATETIME(self, interp: Interpreter) -> None:
         """Convert Unix timestamp to datetime."""
         timestamp = interp.stack_pop()
@@ -401,7 +409,7 @@ TODAY 7 ADD-DAYS
         dt = datetime.fromtimestamp(timestamp, tz=tz)
         interp.stack_push(dt)
 
-    @ForthicDirectWord("( date num_days -- date )", "Add days to a date", "ADD-DAYS")
+    @ForthicDirectWord("( date:date num_days:number -- date:date )", "Add days to a date", "ADD-DAYS")
     async def ADD_DAYS(self, interp: Interpreter) -> None:
         """Add days to a date."""
         num_days = interp.stack_pop()
@@ -423,7 +431,7 @@ TODAY 7 ADD-DAYS
 
         interp.stack_push(d + timedelta(days=num_days))
 
-    @ForthicDirectWord("( date1 date2 -- num_days )", "Get difference in days between dates (date1 - date2). Pure rename of classic SUBTRACT-DATES.", "DAYS-BETWEEN")
+    @ForthicDirectWord("( date1:date date2:date -- num_days:number )", "Get number of days between two dates (date1 - date2). Pure rename of classic SUBTRACT-DATES.", "DAYS-BETWEEN")
     async def DAYS_BETWEEN(self, interp: Interpreter) -> None:
         """Calculate difference in days between two dates."""
         date2 = interp.stack_pop()

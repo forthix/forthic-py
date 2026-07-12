@@ -12,6 +12,7 @@ server (which itself reuses the protobuf StackValue tagged-union shape):
     {"record_value": {"fields": {<key>: <StackValue>, ...}}}
     {"instant_value": {"iso8601": "..."}}
     {"plain_date_value": {"iso8601_date": "..."}}
+    {"plain_time_value": {"iso8601_time": "..."}}
     {"zoned_datetime_value": {"iso8601": "...", "timezone": "..."}}
 
 Operates on plain dicts (no protobuf dependency); the tagged-union shape
@@ -21,7 +22,7 @@ is kept for wire compatibility with the other Forthic runtimes.
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -56,6 +57,9 @@ def serialize_value(value: Any) -> dict[str, Any]:
 
     if isinstance(value, date):
         return {"plain_date_value": {"iso8601_date": value.isoformat()}}
+
+    if isinstance(value, time):
+        return {"plain_time_value": {"iso8601_time": value.isoformat()}}
 
     if isinstance(value, bool):
         return {"bool_value": value}
@@ -115,6 +119,8 @@ def deserialize_value(stack_value: dict[str, Any]) -> Any:
         return _parse_zoned_iso(stack_value["instant_value"]["iso8601"])
     if "plain_date_value" in stack_value:
         return date.fromisoformat(stack_value["plain_date_value"]["iso8601_date"])
+    if "plain_time_value" in stack_value:
+        return time.fromisoformat(stack_value["plain_time_value"]["iso8601_time"])
     if "zoned_datetime_value" in stack_value:
         return _parse_zoned_iso(stack_value["zoned_datetime_value"]["iso8601"])
 
