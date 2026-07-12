@@ -17,7 +17,7 @@ from ...decorators import DecoratedModule, ForthicDirectWord, register_module_do
 from ...decorators import ForthicWord as WordDecorator
 from ...errors import IntentionalStopError, InvalidVariableNameError
 from ...module import Variable
-from ...utils import is_truthy, run_to_outcome
+from ...utils import is_truthy, run_to_outcome, to_compact_json, to_forthic_string
 from ...word_options import WordOptions
 
 
@@ -44,18 +44,17 @@ Essential interpreter operations for stack manipulation, variables, control flow
 - Debug: PEEK!, STACK!
 
 ## Options
-INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option_name value ...] ~> WORD
+INTERPOLATE and PRINT fill ${name} holes (template-literal style; ${.name} also works) from
+variables, read-only. Options via the ~> operator: [.option_name value ...] ~> WORD
 - separator: String to use when joining array values (default: ", ")
-- null_text: Text to display for null/None values (default: "null")
+- null_text: Text to display for null/missing values (default: "")
 - json: Use JSON formatting for all values (default: false)
 
 ## Examples
-5 .count ! "Count: .count" PRINT
-"Items: .items" [.separator " | "] ~> PRINT
+5 .count ! "Count: ${count}" PRINT
 [1 2 3] PRINT                           # Direct printing: 1, 2, 3
 [1 2 3] [.separator " | "] ~> PRINT    # With options: 1 | 2 | 3
-{"name" "Alice"} [.json TRUE] ~> PRINT  # JSON format: {"name":"Alice"}
-"Hello .name" INTERPOLATE .greeting !
+"Hello ${name}" INTERPOLATE .greeting !
 [1 2 3] DUP SWAP
             """,
         )
@@ -453,23 +452,28 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
     # ==================
 
     @WordDecorator(
-        "( string:str [options:WordOptions] -- result:str )",
-        "Interpolate variables (.name) and return result string. Use \\. to escape literal dots.",
+        "( string:string [options:WordOptions] -- result:string )",
+        "Fill ${name} holes from variables (${.name} also works; read-only — a miss renders as "
+        "null_text and creates nothing). Holes are variable names, never expressions. "
+        "Escape a literal with \\${. Null template stays null.",
     )
-    async def INTERPOLATE(self, string: str, options: dict[str, Any]) -> str:
+    async def INTERPOLATE(self, string: Any, options: dict[str, Any]) -> Any:
+        if string is None:
+            return None
         separator = options.get("separator", ", ")
-        null_text = options.get("null_text", "null")
+        null_text = options.get("null_text", "")
         use_json = options.get("json", False)
 
-        return self._interpolate_string(string, separator, null_text, use_json)
+        return self._interpolate_string(str(string), separator, null_text, use_json)
 
     @WordDecorator(
         "( value:any [options:WordOptions] -- )",
-        "Print value to stdout. Strings interpolate variables (.name). Use \\. to escape literal dots.",
+        "Print value to stdout. Strings interpolate ${name} holes first; other values format "
+        "with the same options. Escape a literal with \\${.",
     )
     async def PRINT(self, value: Any, options: dict[str, Any]) -> None:
         separator = options.get("separator", ", ")
-        null_text = options.get("null_text", "null")
+        null_text = options.get("null_text", "")
         use_json = options.get("json", False)
 
         if isinstance(value, str):
@@ -481,30 +485,55 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
 
         print(result)
 
+    # The ONE interpolation grammar (settled 2026-07-11, mirrored in
+    # forthic-ts / forthic-rs): ${name} holes, variable NAMES only — never
+    # expressions — so rendering a template can never execute Forthic
+    # (injection-safe by construction; the same reasoning that made JQ
+    # paths data instead of interpolated source). Computation belongs on
+    # the stack.
     def _interpolate_string(
         self, string: str, separator: str, null_text: str, use_json: bool
     ) -> str:
-        r"""Interpolate variables in string. Handles escaped dots (\.)."""
         if not string:
             string = ""
 
-        # First, handle escape sequences by replacing \. with a temporary placeholder
-        escaped = string.replace("\\.", "\x00ESCAPED_DOT\x00")
+        # \${ escapes a literal ${: swap for a NUL-fenced placeholder so
+        # the hole regex can't see it, restore after
+        ESCAPED_HOLE = "\x00ESCAPED_HOLE\x00"
+        escaped = string.replace("\\${", ESCAPED_HOLE)
 
-        # Replace whitespace-preceded or start-of-string .variable patterns
-        def replace_var(match: re.Match) -> str:
+        def fill_hole(match: re.Match) -> str:
             assert self._module.interp is not None
-            var_name = match.group(1)
-            variable = CoreModule._get_or_create_variable(self._module.interp, var_name)
-            value = variable.get_value()
+            name = self._hole_name(match.group(1))
+            # READ-ONLY lookup: templates render state, never mutate it — a
+            # miss renders as null_text and creates nothing (no @-style
+            # get-or-create)
+            variable = self._module.interp.find_variable(name)
+            value = variable.get_value() if variable is not None else None
             return self._value_to_string(value, separator, null_text, use_json)
 
-        interpolated = re.sub(
-            r"(?:^|(?<=\s))\.([a-zA-Z_][a-zA-Z0-9_-]*)", replace_var, escaped
-        )
+        interpolated = re.sub(r"\$\{([^{}]*)\}", fill_hole, escaped)
 
-        # Restore escaped dots
-        return interpolated.replace("\x00ESCAPED_DOT\x00", ".")
+        return interpolated.replace(ESCAPED_HOLE, "${")
+
+    def _hole_name(self, body: str) -> str:
+        """Validate a hole body into a variable name. ${1 + 2} is a hard
+        error, not a template feature. __ names are reserved, same as ! / @."""
+        assert self._module.interp is not None
+        trimmed = str(body).strip()
+        name = trimmed[1:] if trimmed.startswith(".") else trimmed
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", name):
+            raise ValueError(
+                f"Invalid interpolation hole '${{{body}}}': holes are variable names "
+                "(${name} or ${.name}), not expressions. Escape a literal with \\${"
+            )
+        if name.startswith("__"):
+            raise InvalidVariableNameError(
+                self._module.interp.get_top_input_string(),
+                name,
+                self._module.interp.get_string_location(),
+            )
+        return name
 
     def _value_to_string(
         self, value: Any, separator: str, null_text: str, use_json: bool
@@ -513,9 +542,12 @@ INTERPOLATE and PRINT support options via the ~> operator using syntax: [.option
         if value is None:
             return null_text
         if use_json:
-            return json.dumps(value, default=str)
+            return to_compact_json(value)
         if isinstance(value, list):
-            return separator.join(str(v) for v in value)
+            # Elements render recursively, so null elements also use null_text
+            return separator.join(
+                self._value_to_string(v, separator, null_text, use_json) for v in value
+            )
         if isinstance(value, dict):
-            return json.dumps(value, default=str)
-        return str(value)
+            return to_compact_json(value)
+        return to_forthic_string(value)
