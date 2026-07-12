@@ -92,9 +92,8 @@ async def test_datetime_equality_requires_same_timezone():
 
 @pytest.mark.asyncio
 async def test_temporal_membership_works():
-    # values_equal also feeds the membership words (py spelling: IN is
-    # item-first; CONTAINS? replaces it in Batch 1)
-    assert await run("TODAY [ TODAY ] IN") is True
+    # values_equal also feeds the membership words
+    assert await run("[ TODAY ] TODAY CONTAINS?") is True
 
 
 @pytest.mark.asyncio

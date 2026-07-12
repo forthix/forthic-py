@@ -159,20 +159,20 @@ class TestControlFlow:
         assert result == 99
 
     @pytest.mark.asyncio
-    async def test_star_default_with_value(self) -> None:
-        """Test *DEFAULT returns value if not None/empty."""
+    async def test_default_run_with_value(self) -> None:
+        """Test DEFAULT-RUN returns value if not None/empty."""
         interp = StandardInterpreter()
 
-        await interp.run('42 \"100\" *DEFAULT')
+        await interp.run('42 \"100\" DEFAULT-RUN')
         result = interp.stack_pop()
         assert result == 42
 
     @pytest.mark.asyncio
-    async def test_star_default_with_none(self) -> None:
-        """Test *DEFAULT executes Forthic if None."""
+    async def test_default_run_with_none(self) -> None:
+        """Test DEFAULT-RUN executes Forthic if None."""
         interp = StandardInterpreter()
 
-        await interp.run('NULL \"50 50 +\" *DEFAULT')
+        await interp.run('NULL \"50 50 +\" DEFAULT-RUN')
         result = interp.stack_pop()
         assert result == 100
 
@@ -371,11 +371,11 @@ class TestExecution:
     """Test code execution."""
 
     @pytest.mark.asyncio
-    async def test_interpret(self) -> None:
-        """Test INTERPRET executes Forthic string."""
+    async def test_run_word(self) -> None:
+        """Test RUN executes Forthic string."""
         interp = StandardInterpreter()
 
-        await interp.run('\"10 20 +\" INTERPRET')
+        await interp.run('\"10 20 +\" RUN')
         result = interp.stack_pop()
         assert result == 30
 

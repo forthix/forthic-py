@@ -169,21 +169,21 @@ class TestVariables:
             await interp.run('"value" "__invalid3" !@')
 
 
-class TestInterpret:
-    """Test INTERPRET word."""
+class TestRun:
+    """Test RUN word."""
 
     @pytest.mark.asyncio
-    async def test_interpret_literal(self) -> None:
+    async def test_run_literal(self) -> None:
         """Test interpreting a literal."""
         interp = StandardInterpreter()
-        await interp.run("'24' INTERPRET")
+        await interp.run("'24' RUN")
         assert interp.stack_pop() == 24
 
     @pytest.mark.asyncio
-    async def test_interpret_module(self) -> None:
+    async def test_run_module(self) -> None:
         """Test interpreting module code."""
         interp = StandardInterpreter()
-        await interp.run("""'{module-A  : MESSAGE   "Hi" ;}' INTERPRET""")
+        await interp.run("""'{module-A  : MESSAGE   "Hi" ;}' RUN""")
         await interp.run("{module-A MESSAGE}")
         assert interp.stack_pop() == "Hi"
 
@@ -589,13 +589,13 @@ class TestLogic:
 
     @pytest.mark.asyncio
     async def test_logic(self) -> None:
-        """Test logical operations."""
+        """Test logical operations (OR/AND are two-operand; arrays use ANY?/ALL?)."""
         interp = StandardInterpreter()
         await interp.run("""
             FALSE FALSE OR
-            [FALSE FALSE TRUE FALSE] OR
+            [FALSE FALSE TRUE FALSE] ANY?
             FALSE TRUE AND
-            [FALSE FALSE TRUE FALSE] AND
+            [FALSE FALSE TRUE FALSE] ALL?
             FALSE NOT
         """)
         stack = interp.get_stack()
@@ -604,6 +604,16 @@ class TestLogic:
         assert stack[2] is False
         assert stack[3] is False
         assert stack[4] is True
+
+    @pytest.mark.asyncio
+    async def test_or_and_reject_arrays(self) -> None:
+        """The array-collapse forms of OR/AND are gone (arity stability)."""
+        interp = StandardInterpreter()
+        with pytest.raises(Exception, match="ANY\\?"):
+            await interp.run("FALSE [TRUE] OR")
+        interp.reset()
+        with pytest.raises(Exception, match="ALL\\?"):
+            await interp.run("TRUE [TRUE] AND")
 
 
 class TestAdvancedMapAndIteration:
@@ -722,7 +732,7 @@ class TestAdvancedMapAndIteration:
               ["k2"  k2-REC]
             ] REC;
 
-            DEEP-RECORD ">STR INTERPRET" [.depth 2 .outcomes TRUE] ~> MAP
+            DEEP-RECORD ">STR RUN" [.depth 2 .outcomes TRUE] ~> MAP
         """)
         record = interp.stack_pop()
 
@@ -1577,13 +1587,13 @@ class TestSpecialAndMiscOperations:
         assert stack[2] == "Howdy"
 
     @pytest.mark.asyncio
-    async def test_star_default(self) -> None:
-        """Test *DEFAULT operation."""
+    async def test_default_run(self) -> None:
+        """Test DEFAULT-RUN operation."""
         interp = StandardInterpreter()
         await interp.run("""
-            NULL "3.1 5 +" *DEFAULT
-            0 "22.4" *DEFAULT
-            "" "['Howdy, ' 'Everyone!'] CONCAT" *DEFAULT
+            NULL "3.1 5 +" DEFAULT-RUN
+            0 "22.4" DEFAULT-RUN
+            "" "['Howdy, ' 'Everyone!'] CONCAT" DEFAULT-RUN
         """)
         stack = interp.get_stack()
         assert abs(stack[0] - 8.1) < 0.01
@@ -1657,12 +1667,12 @@ class TestLogicAndComparison:
     """Test logical and comparison operations."""
 
     @pytest.mark.asyncio
-    async def test_in_operation(self) -> None:
-        """Test IN operation."""
+    async def test_contains_operation(self) -> None:
+        """Test CONTAINS? (haystack-first; classic item-first IN dropped)."""
         interp = StandardInterpreter()
         await interp.run("""
-            "alpha" ["beta" "gamma"] IN
-            "alpha" ["beta" "gamma" "alpha"] IN
+            ["beta" "gamma"] "alpha" CONTAINS?
+            ["beta" "gamma" "alpha"] "alpha" CONTAINS?
         """)
         stack = interp.get_stack()
         assert stack[0] is False
