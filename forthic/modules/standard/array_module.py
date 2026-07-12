@@ -13,7 +13,24 @@ if TYPE_CHECKING:
 
 from ...decorators import DecoratedModule, ForthicDirectWord, register_module_doc
 from ...decorators import ForthicWord as WordDecorator
-from ...utils import is_truthy, run_to_outcome, values_equal
+from ...utils import (
+    is_truthy,
+    run_to_outcome,
+    to_compact_json,
+    value_to_key_string,
+    values_equal,
+)
+
+
+def _as_index(value: Any) -> int | None:
+    """ts Number(head) coercion for MAP-AT array indexes: numeric strings
+    work as indexes; anything non-integral is a miss."""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(f) if f.is_integer() else None
+
 
 # Generous ceiling on how many elements a single word may materialize from
 # caller-supplied sizes (SLICE, RANGE). Fails fast instead of OOMing the host.
@@ -31,17 +48,17 @@ class ArrayModule(DecoratedModule):
 Array and collection operations for manipulating arrays and records.
 
 ## Categories
-- Access: NTH, LAST, SLICE, TAKE, SKIP, LENGTH, INDEX, KEY-OF
+- Access: NTH, FIRST, LAST, SLICE, TAKE, TAKE-LAST, SKIP, LENGTH, INDEX, KEY-OF
 - Transform: MAP, REVERSE
 - Combine: APPEND, ZIP, ZIP-WITH
-- Filter: SELECT, UNIQUE, DIFFERENCE, INTERSECTION, UNION
-- Sort: SORT, SHUFFLE, ROTATE
+- Filter: FILTER, FIND, COUNT, UNIQUE, UNIQUE-BY, DIFFERENCE, INTERSECTION, UNION
+- Sort: SORT, SORT-BY, SORT-U, MIN-BY, MAX-BY, SHUFFLE, ROTATE
 - Group: BY-FIELD, GROUP-BY-FIELD, GROUP-BY, GROUPS-OF
-- Utility: <REPEAT, FOREACH, REDUCE, UNPACK, FLATTEN
+- Utility: TIMES-RUN, FOREACH, REDUCE, UNPACK, FLATTEN, NUMBERED, MAP-AT
 
 ## Options
 Several words support options via the ~> operator using syntax: [.option_name value ...] ~> WORD
-- with_key: Push index/key before value (MAP, FOREACH, GROUP-BY, SELECT)
+- with_key: Push index/key before value (MAP, FOREACH, GROUP-BY, FILTER)
 - depth: Recursion depth for nested operations (MAP, FLATTEN)
 - outcomes: Map each element to {ok: value} / {error: info} (MAP)
 - push_rest: Push remaining items after operation (TAKE)
@@ -93,6 +110,15 @@ Several words support options via the ~> operator using syntax: [.option_name va
             else:
                 key = keys[n]
                 interp.stack_push(container[key])
+
+    @WordDecorator("( container:any -- item:any )", "Get first element from array or record (insertion order for records)")
+    async def FIRST(self, container: Any) -> Any:
+        if container is None:
+            return None
+        if isinstance(container, list):
+            return container[0] if container else None
+        keys = list(container.keys())
+        return container[keys[0]] if keys else None
 
     @WordDecorator("( container:any -- item:any )", "Get last element from array or record")
     async def LAST(self, container: Any) -> Any:
@@ -211,6 +237,23 @@ Several words support options via the ~> operator using syntax: [.option_name va
             # Records keep their shape and insertion order
             keys = list(container.keys())
             return {k: container[k] for k in keys[n:]}
+
+    @WordDecorator(
+        "( container:any n:number -- result:any )",
+        "Take last n elements from array or record (insertion order for records).",
+        "TAKE-LAST",
+    )
+    async def TAKE_LAST(self, container: Any, n: int) -> Any:
+        if container is None:
+            return []
+        if n <= 0:
+            return [] if isinstance(container, list) else {}
+
+        if isinstance(container, list):
+            return container[max(0, len(container) - n):]
+        keys = list(container.keys())
+        tail = keys[max(0, len(keys) - n):]
+        return {k: container[k] for k in tail}
 
     @ForthicDirectWord("( container:any value:any -- key:any )", "Find key of value in container", "KEY-OF")
     async def KEY_OF(self, interp: Interpreter) -> None:
@@ -452,9 +495,10 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @ForthicDirectWord(
         "( container:any forthic:string [options:WordOptions] -- filtered:any )",
-        "Filter items with predicate. Options: with_key (bool)",
+        "Keep items where the predicate returns truthy. Options: with_key (bool). Records keep their shape and insertion order.",
+        "FILTER",
     )
-    async def SELECT(self, interp: Interpreter) -> None:
+    async def FILTER(self, interp: Interpreter) -> None:
         options_dict = {}
         from ...word_options import WordOptions
 
@@ -575,6 +619,232 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return result
 
+    @ForthicDirectWord(
+        "( items:any forthic:string -- item:any )",
+        "Return the first item where forthic returns truthy, or null if none (short-circuits).",
+        "FIND",
+    )
+    async def FIND(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        items = interp.stack_pop()
+        if not items:
+            interp.stack_push(None)
+            return
+        string_location = interp.get_string_location()
+        seq = items if isinstance(items, list) else list(items.values())
+        for item in seq:
+            interp.stack_push(item)
+            await interp.run(forthic, string_location)
+            if is_truthy(interp.stack_pop()):
+                interp.stack_push(item)
+                return
+        interp.stack_push(None)
+
+    @ForthicDirectWord(
+        "( items:any forthic:string -- n:number )",
+        "Count items where forthic returns truthy.",
+        "COUNT",
+    )
+    async def COUNT(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        items = interp.stack_pop()
+        if not items:
+            interp.stack_push(0)
+            return
+        string_location = interp.get_string_location()
+        seq = items if isinstance(items, list) else list(items.values())
+        n = 0
+        for item in seq:
+            interp.stack_push(item)
+            await interp.run(forthic, string_location)
+            if is_truthy(interp.stack_pop()):
+                n += 1
+        interp.stack_push(n)
+
+    @ForthicDirectWord(
+        "( items:any[] forthic:string -- sorted:any[] )",
+        "Sort items by the value forthic produces (ascending, stable).",
+        "SORT-BY",
+    )
+    async def SORT_BY(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        items = interp.stack_pop()
+        if not isinstance(items, list):
+            interp.stack_push(items)
+            return
+        string_location = interp.get_string_location()
+        decorated = []
+        for item in items:
+            interp.stack_push(item)
+            await interp.run(forthic, string_location)
+            decorated.append((item, interp.stack_pop()))
+        # Python's sort is stable: equal keys keep input order
+        from functools import cmp_to_key
+
+        def cmp(a: tuple, b: tuple) -> int:
+            if a[1] is None or b[1] is None:
+                return 0 if a[1] is b[1] else (1 if a[1] is None else -1)
+            if a[1] < b[1]:
+                return -1
+            if a[1] > b[1]:
+                return 1
+            return 0
+
+        decorated.sort(key=cmp_to_key(cmp))
+        interp.stack_push([d[0] for d in decorated])
+
+    @ForthicDirectWord(
+        "( items:any[] forthic:string -- item:any )",
+        "Return the item with the smallest value produced by forthic. Null on empty input; ties keep the earliest item.",
+        "MIN-BY",
+    )
+    async def MIN_BY(self, interp: Interpreter) -> None:
+        await self._best_by(interp, lambda key, best: key < best)
+
+    @ForthicDirectWord(
+        "( items:any[] forthic:string -- item:any )",
+        "Return the item with the largest value produced by forthic. Null on empty input; ties keep the earliest item.",
+        "MAX-BY",
+    )
+    async def MAX_BY(self, interp: Interpreter) -> None:
+        await self._best_by(interp, lambda key, best: key > best)
+
+    async def _best_by(self, interp: Interpreter, wins: Any) -> None:
+        forthic = interp.stack_pop()
+        items = interp.stack_pop()
+        if not isinstance(items, list) or len(items) == 0:
+            interp.stack_push(None)
+            return
+        string_location = interp.get_string_location()
+        best_item = None
+        best_key = None
+        first = True
+        for item in items:
+            interp.stack_push(item)
+            await interp.run(forthic, string_location)
+            key = interp.stack_pop()
+            if first or wins(key, best_key):
+                best_item = item
+                best_key = key
+                first = False
+        interp.stack_push(best_item)
+
+    @ForthicDirectWord(
+        "( items:any[] forthic:string -- items:any[] )",
+        "Dedupe items by the key forthic produces (keeps first occurrence).",
+        "UNIQUE-BY",
+    )
+    async def UNIQUE_BY(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        items = interp.stack_pop()
+        if not isinstance(items, list):
+            interp.stack_push(items)
+            return
+        string_location = interp.get_string_location()
+        seen = set()
+        result = []
+        for item in items:
+            interp.stack_push(item)
+            await interp.run(forthic, string_location)
+            skey = to_compact_json(interp.stack_pop())
+            if skey not in seen:
+                seen.add(skey)
+                result.append(item)
+        interp.stack_push(result)
+
+    @WordDecorator(
+        "( strings:any[] -- strings:any[] )",
+        "Sort an array and remove duplicates (bash sort -u).",
+        "SORT-U",
+    )
+    async def SORT_U(self, strings: Any) -> Any:
+        if not isinstance(strings, list):
+            return strings
+        non_null = sorted(x for x in strings if x is not None)
+        ordered = non_null + [x for x in strings if x is None]
+        seen = set()
+        result = []
+        for item in ordered:
+            key = to_compact_json(item)
+            if key not in seen:
+                seen.add(key)
+                result.append(item)
+        return result
+
+    @WordDecorator(
+        "( items:any[] -- pairs:any[] )",
+        "Pair each item with its index: [v0 v1 v2] -> [[0 v0] [1 v1] [2 v2]]. Non-arrays yield an empty array.",
+        "NUMBERED",
+    )
+    async def NUMBERED(self, items: Any) -> list:
+        if not isinstance(items, list):
+            return []
+        return [[i, item] for i, item in enumerate(items)]
+
+    @ForthicDirectWord(
+        "( container:any key:any|any[] forthic:string -- container:any )",
+        "Apply forthic to the value at key/index, returning a new container with that slot transformed. "
+        "The key arg may be a single key (one-level update) or a path-array for deep updates. "
+        "Misses (missing key, out-of-range index, scalar mid-path) are silent no-ops. "
+        "Polymorphic over arrays and records. Equivalent of jq's |= operator.",
+        "MAP-AT",
+    )
+    async def MAP_AT(self, interp: Interpreter) -> None:
+        forthic = interp.stack_pop()
+        key = interp.stack_pop()
+        container = interp.stack_pop()
+        if container is None:
+            interp.stack_push(container)
+            return
+        string_location = interp.get_string_location()
+
+        async def apply(value: Any) -> Any:
+            interp.stack_push(value)
+            await interp.run(forthic, string_location)
+            return interp.stack_pop()
+
+        async def map_at_single(cont: Any, k: Any) -> Any:
+            if isinstance(cont, list):
+                idx = k if isinstance(k, int) and not isinstance(k, bool) else _as_index(k)
+                if idx is None or idx < 0 or idx >= len(cont):
+                    return cont
+                result = list(cont)
+                result[idx] = await apply(result[idx])
+                return result
+            if isinstance(cont, dict):
+                if k not in cont:
+                    return cont
+                result_rec = dict(cont)
+                result_rec[k] = await apply(result_rec[k])
+                return result_rec
+            return cont
+
+        async def map_at_path(cont: Any, head: Any, rest: list) -> Any:
+            if not rest:
+                return await map_at_single(cont, head)
+            if isinstance(cont, list):
+                idx = head if isinstance(head, int) and not isinstance(head, bool) else _as_index(head)
+                if idx is None or idx < 0 or idx >= len(cont):
+                    return cont
+                result = list(cont)
+                result[idx] = await map_at_path(result[idx], rest[0], rest[1:])
+                return result
+            if isinstance(cont, dict):
+                if head not in cont:
+                    return cont
+                result_rec = dict(cont)
+                result_rec[head] = await map_at_path(result_rec[head], rest[0], rest[1:])
+                return result_rec
+            return cont
+
+        if isinstance(key, list):
+            if len(key) == 0:
+                interp.stack_push(await apply(container))
+                return
+            interp.stack_push(await map_at_path(container, key[0], key[1:]))
+            return
+        interp.stack_push(await map_at_single(container, key))
+
     # ==================
     # Sort
     # ==================
@@ -682,7 +952,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
         string_location = interp.get_string_location()
 
         if items is None:
-            return {}
+            return None
 
         result: dict = {}
         for item in items:
@@ -712,8 +982,10 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         result: dict = {}
         for v in values:
-            if v:
-                result[v[field]] = v
+            # Falsy records are skipped; last occurrence of a key wins.
+            # Missing fields group under "null" (cross-runtime contract)
+            if is_truthy(v):
+                result[value_to_key_string(v.get(field))] = v
 
         return result
 
@@ -729,16 +1001,20 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         result: dict = {}
         for v in values:
-            field_val = v[field]
+            if v is None:
+                # A proper error instead of the raw TypeError None[field]
+                # raises; matches the ts/rs message
+                raise ValueError(f"GROUP-BY-FIELD: cannot read field '{field}' of NULL")
+            # Missing fields group under "null" (cross-runtime contract);
+            # array-valued fields put the record in every group it names
+            field_val = v.get(field)
             if isinstance(field_val, list):
                 for fv in field_val:
-                    if fv not in result:
-                        result[fv] = []
-                    result[fv].append(v)
+                    key = value_to_key_string(fv)
+                    result.setdefault(key, []).append(v)
             else:
-                if field_val not in result:
-                    result[field_val] = []
-                result[field_val].append(v)
+                key = value_to_key_string(field_val)
+                result.setdefault(key, []).append(v)
 
         return result
 
@@ -773,13 +1049,9 @@ Several words support options via the ~> operator using syntax: [.option_name va
                 interp.stack_push(key)
             interp.stack_push(item)
             await interp.run(forthic, string_location)
-            group_key = interp.stack_pop()
-            # Convert numeric keys to strings to match JavaScript/TypeScript behavior
-            if isinstance(group_key, (int, float)):
-                group_key = str(int(group_key))
-            if group_key not in result:
-                result[group_key] = []
-            result[group_key].append(item)
+            # Group keys coerce like JS object keys (strings in every runtime)
+            group_key = value_to_key_string(interp.stack_pop())
+            result.setdefault(group_key, []).append(item)
 
         if isinstance(items, list):
             for i, item in enumerate(items):
@@ -792,6 +1064,7 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
     @WordDecorator("( container:any[] n:number -- groups:any[] )", "Split array into groups of size n", "GROUPS-OF")
     async def GROUPS_OF(self, container: list, n: int) -> list:
+        n = int(n)  # fractional group sizes truncate (sanctioned rs precedent)
         if n <= 0:
             raise ValueError("GROUPS-OF requires group size > 0")
 
@@ -956,20 +1229,16 @@ Several words support options via the ~> operator using syntax: [.option_name va
 
         return result
 
-    @ForthicDirectWord("( item:any forthic:string num_times:number -- )", "Repeat execution of forthic num_times", "<REPEAT")
-    async def l_REPEAT(self, interp: Interpreter) -> None:
-        num_times = interp.stack_pop()
+    @ForthicDirectWord(
+        "( num_times:number forthic:string -- )",
+        "Run forthic num_times. Each invocation runs in the current stack — no automatic per-iteration value passing. (Classic <REPEAT dropped: it pushed item+result each pass.)",
+        "TIMES-RUN",
+    )
+    async def TIMES_RUN(self, interp: Interpreter) -> None:
         forthic = interp.stack_pop()
+        num_times = interp.stack_pop()
+        if num_times is None or not forthic:
+            return
         string_location = interp.get_string_location()
-
-        for _ in range(num_times):
-            # Store item so we can push it back later
-            item = interp.stack_pop()
-            interp.stack_push(item)
-
+        for _ in range(int(num_times)):
             await interp.run(forthic, string_location)
-            res = interp.stack_pop()
-
-            # Push original item and result
-            interp.stack_push(item)
-            interp.stack_push(res)

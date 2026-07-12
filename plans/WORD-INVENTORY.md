@@ -241,7 +241,22 @@ TRY / OK? / ERROR? / UNWRAP / UNWRAP-OR belong to the plan's **Phase 2**
 (transactional stack, module unwinding, rs try_word_test.rs as the law) —
 counted as missing here, implemented there.
 
-**Batch 2 — higher-order & sorting: TODO**
+**Batch 2 — higher-order & sorting: DONE (feat/word-batch2)**
+FILTER (SELECT dropped; record shape + insertion order; with_key), FIND
+(short-circuits), COUNT, SORT verified (natural order NULL-last,
+comparator = KEY function, non-array passthrough, copy-on-write), SORT-BY
+(stable ties), MIN-BY/MAX-BY (null on empty; ties keep earliest),
+UNIQUE-BY (keeps first; to_compact_json seen-keys), SORT-U, NUMBERED,
+FIRST, TAKE-LAST, MAP-AT (single key or path array, silent misses, empty
+path = whole container, numeric-string indexes, copy-on-write), TIMES-RUN
+(<REPEAT dropped — no automatic value passing). Grouping fixes:
+GROUP-BY / GROUP-BY-FIELD / BY-FIELD group keys coerce like JS object
+keys via utils.value_to_key_string (the old str(int()) hack corrupted
+float keys); GROUP-BY-FIELD errors properly on NULL records and groups
+missing fields under "null"; BY-FIELD skips falsy records via is_truthy;
+GROUPS-OF truncates fractional sizes; INDEX passes None through.
+Spec: tests/unit/core/test_word_batch2.py; tier2 FIRST/TAKE-LAST
+assertions un-deferred. Original spec:
 FILTER (rename SELECT; predicate via is_truthy — current code uses raw
 Python truthiness at array_module.py:471,482), FIND, COUNT, SORT-BY,
 MIN-BY/MAX-BY (null on empty), UNIQUE-BY (keeps first), SORT-U, NUMBERED,

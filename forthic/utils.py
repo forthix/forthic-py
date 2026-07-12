@@ -59,6 +59,16 @@ def values_equal(a: Any, b: Any) -> bool:
     return bool(a == b)
 
 
+def value_to_key_string(value: Any) -> str:
+    """Coerce a value to a record key the way JS object keys coerce
+    (String(value)): None -> "null", booleans lowercase, integral floats
+    drop the ".0", arrays comma-join. Used by the grouping words so group
+    keys are strings in every runtime."""
+    if value is None:
+        return "null"
+    return to_forthic_string(value)
+
+
 def _same_stack_item(a: Any, b: Any) -> bool:
     """Element comparison for TRY's unchanged-stack check (ts uses ===):
     identity for objects, value equality for same-type primitives."""

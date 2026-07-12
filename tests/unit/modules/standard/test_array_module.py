@@ -247,9 +247,9 @@ class TestFilterOperations:
     """Test filter operations."""
 
     @pytest.mark.asyncio
-    async def test_select(self, interp):
-        """Test SELECT."""
-        await interp.run('[0 1 2 3 4 5 6] "2 MOD 1 ==" SELECT')
+    async def test_filter(self, interp):
+        """Test FILTER."""
+        await interp.run('[0 1 2 3 4 5 6] "2 MOD 1 ==" FILTER')
         assert interp.stack_pop() == [1, 3, 5]
 
 
@@ -292,10 +292,16 @@ class TestAdvancedOperations:
         assert interp.stack_pop() == [2, 4, 6, 8, 10]
 
     @pytest.mark.asyncio
-    async def test_repeat(self, interp):
-        """Test <REPEAT."""
-        await interp.run('[0 "1 +" 6 <REPEAT]')
+    async def test_times_run(self, interp):
+        """TIMES-RUN replaces <REPEAT (no automatic value passing)."""
+        await interp.run('[0 6 "DUP 1 +" TIMES-RUN]')
         assert interp.stack_pop() == [0, 1, 2, 3, 4, 5, 6]
+
+    @pytest.mark.asyncio
+    async def test_classic_repeat_is_gone(self, interp):
+        """Tombstone: <REPEAT dropped for TIMES-RUN."""
+        with pytest.raises(Exception, match="REPEAT"):
+            await interp.run('0 "1 +" 6 <REPEAT')
 
 
 # ========================================
